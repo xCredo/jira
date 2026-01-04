@@ -4,6 +4,7 @@ import { BOARD_PROPERTIES } from '../../shared/constants';
 import { mergeSwimlaneSettings } from '../../swimlane/utils';
 import { findGroupByColumnId, generateColorByFirstChars } from '../shared/utils';
 import styles from './styles.module.css';
+import React from 'react';
 
 interface EditData {
   rapidListConfig: {
@@ -50,7 +51,15 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
   }
 
   waitForLoading(): Promise<Element> {
-    return this.waitForElement('.ghx-column-header-group');
+    return Promise.race([
+      this.waitForElement('.ghx-column-header-group'),
+      this.waitForElement('[data-testid="filter-refinement.ui.filter-popup.button"]'),
+      new Promise<Element>(resolve => 
+        setTimeout(() => {
+          resolve(document.body);
+        }, 8000)
+      )
+    ]);
   }
 
   loadData(): Promise<[EditData, BoardGroup, SwimlanesSettings]> {
@@ -79,14 +88,48 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
       this.styleColumnHeaders();
       this.styleColumnsWithLimitations();
     });
+    
+    this.mountRandomColorButton();
+  }
+
+  private mountRandomColorButton(): void {
+    const waitForControlsBar = () => {
+      const controlsBar = document.querySelector('[data-testid="software-board.header.controls-bar"]');
+      if (controlsBar) {
+        if (!controlsBar.querySelector('[data-jh-random-color-button]')) {
+          const container = document.createElement('div');
+          container.setAttribute('data-jh-random-color-button', '');
+          container.style.display = 'inline-block';
+          container.style.marginLeft = '8px';
+          container.style.position = 'relative';
+          controlsBar.appendChild(container);
+
+          import('./RandomColorButton').then(({ RandomColorButton }) => {
+            import('react-dom/client').then(({ createRoot }) => {
+              const root = createRoot(container);
+              root.render(React.createElement(RandomColorButton));
+            });
+          });
+        }
+        return true;
+      }
+      return false;
+    };
+
+    if (!waitForControlsBar()) {
+      const observer = new MutationObserver(() => {
+        if (waitForControlsBar()) {
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
   }
 
   styleColumnHeaders(): void {
     if (!this.boardGroups) return;
 
     const columnsInOrder = this.getOrderedColumns();
-    // for jira v8 header.
-    // One of the parents has overflow: hidden
     const headerGroup = document.querySelector<HTMLElement>('#ghx-pool-wrapper');
 
     if (headerGroup != null) {
@@ -94,7 +137,6 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
     }
 
     columnsInOrder.forEach((columnId, index) => {
-      // check for ts
       if (!this.boardGroups) return;
       const { name, value } = findGroupByColumnId(columnId, this.boardGroups);
 
@@ -162,7 +204,6 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
       const leftTailColumnId = columnsInOrder[leftTailColumnIndex];
 
       if (!leftTailColumnId) {
-        // throw `Need rebuild WIP-limits of columns. WIP-limits used not exists column ${leftTailColumnId}`;
         return;
       }
 
@@ -185,7 +226,6 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
         const columnHeaderElement = document.querySelector<HTMLElement>(`.ghx-column[data-id="${column.id}"]`);
         columnHeaderElement?.classList.remove('ghx-busted', 'ghx-busted-max');
 
-        // задачи в облачной джире
         document.querySelectorAll<HTMLElement>(`.ghx-column[data-column-id="${column.id}"]`).forEach(issue => {
           issue.classList.remove('ghx-busted', 'ghx-busted-max');
         });

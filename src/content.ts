@@ -35,6 +35,7 @@ import { LocalSettingsBoardPage } from './features/local-settings/BoardPage';
 import { extensionApiService } from './shared/ExtensionApiService';
 import { AdditionalCardElementsBoardPage } from './features/additional-card-elements/BoardPage';
 import { AdditionalCardElementsBoardBacklogPage } from './features/additional-card-elements/BoardBacklogPage';
+import ColumnLimits from './column-limits/BoardPage';
 
 setAutoFreeze(false);
 
@@ -54,8 +55,12 @@ function initDiContainer() {
 }
 
 async function start() {
-  if (!isJira) return;
-
+  if (!isJira)
+    {
+      console.log('NOTT JiRA')
+      return;
+    }
+  console.log('Jira')
   initBlurSensitive();
   extensionApiService.sendMessage({ message: 'jira-helper-inited' });
 
@@ -79,6 +84,7 @@ async function start() {
       LocalSettingsBoardPage,
       DiagnosticBoardPage,
       AdditionalCardElementsBoardPage,
+      ColumnLimits,
     ],
     [Routes.BOARD_BACKLOG]: [AdditionalCardElementsBoardBacklogPage],
     [Routes.SETTINGS]: [

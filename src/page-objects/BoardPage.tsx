@@ -63,6 +63,10 @@ export interface IBoardPagePageObject {
     column: string;
     columnHeader: string;
     columnTitle: string;
+    issueCardCloud: string;
+    boardHeaderCloud: string;
+    boardContainerCloud: string;
+    boardColumnContainerCloud: string;
   };
 
   classlist: {
@@ -73,6 +77,7 @@ export interface IBoardPagePageObject {
   listenCards(callback: (cards: CardPageObject[]) => void): () => void;
   getColumnOfIssue(issueId: string): string;
   getHtml(): string;
+  getAllCloudCards(): HTMLElement[];
 }
 
 export const BoardPagePageObject: IBoardPagePageObject = {
@@ -86,6 +91,10 @@ export const BoardPagePageObject: IBoardPagePageObject = {
     column: '.ghx-column',
     columnHeader: '#ghx-column-headers',
     columnTitle: '.ghx-column-title',
+    issueCardCloud: '[data-testid="platform-board-kit.ui.card.card"]',
+    boardHeaderCloud: '[data-testid="software-board.header.controls-bar"]',
+    boardContainerCloud: '[data-testid^="software-board.board-container"]',
+    boardColumnContainerCloud: '[data-testid="software-board.board-container.board"]',
   },
 
   classlist: {
@@ -135,6 +144,10 @@ export const BoardPagePageObject: IBoardPagePageObject = {
 
   getHtml(): string {
     return document.body.innerHTML;
+  },
+  
+  getAllCloudCards(): HTMLElement[] {
+    return Array.from(document.querySelectorAll<HTMLElement>(this.selectors.issueCardCloud));
   },
 };
 

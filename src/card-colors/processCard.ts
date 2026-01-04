@@ -44,14 +44,11 @@ function markCardAsProcessed(card: Element, processedAttribute: string): void {
 }
 
 export function processCard({ card, processedAttribute }: ProcessCardOptions): void {
-  const grabber = card.querySelector(BoardPagePageObject.selectors.grabber) as HTMLElement;
-  if (!grabber) {
-    return;
-  }
-
-  const color = grabber.style.backgroundColor;
   if (color === 'transparent' || color === 'rgba(0, 0, 0, 0)' || color === '') {
-    return;
+    // Дефолтный цвет, красим в желтый
+    card.style.setProperty('background-color', 'rgba(255, 255, 0, 1)', 'important');
+  } 
+  else {
   }
 
   markCardAsProcessed(card, processedAttribute);
