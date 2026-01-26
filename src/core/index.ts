@@ -4,6 +4,8 @@ export { assigneeManager, type Assignee } from './AssigneeManager';
 export { visualizationManager } from './VisualizationManager';
 export { workloadManager } from './WorkloadManager';
 export { overloadVisualizer } from './OverloadVisualizer';
+export { columnManager } from './ColumnManager';
+export { wipLimitsManager } from './WipLimitsManager';
 export type { Settings, AssigneeHighlightSettings } from './SettingsManager';
 
 // Глобальная инициализация расширения
@@ -41,6 +43,8 @@ export function initializeCore(): void {
       visualizationManager,
       workloadManager,
       overloadVisualizer,
+      columnManager,
+      wipLimitsManager,
       initializeCore,
     };
     console.log('[Jira Helper] JiraHelper экспортирован в глобальную область');

@@ -7,6 +7,7 @@ import styles from './styles.module.css';
 import { visualizationManager } from '../../core/VisualizationManager';
 import { overloadVisualizer } from '../../core/OverloadVisualizer';
 import { OverloadSettings } from './OverloadSettings';
+import { PersonalWipLimits } from './PersonalWipLimits';
 
 interface RandomColorButtonProps {
   onColorAllCards?: () => void;
@@ -27,8 +28,7 @@ const COLOR_OPTIONS = [
 let counter = 0;
 export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAllCards }) => {
   const [showSettings, setShowSettings] = useState(false);
-  // ✅ ДОБАВЛЕНО: Новая вкладка "overload"
-  const [settingsTab, setSettingsTab] = useState<'columns' | 'assignees' | 'overload'>('columns');
+  const [settingsTab, setSettingsTab] = useState<'columns' | 'assignees' | 'wip-limits'>('columns');
   const [columnColorsEnabled, setColumnColorsEnabled] = useState(false);
   const [isTogglingColumns, setIsTogglingColumns] = useState(false);
   const [assigneeEnabled, setAssigneeEnabled] = useState(false);
@@ -324,7 +324,10 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
 
       {/* Меню настроек */}
       {showSettings && (
-        <div className={styles['jh-settings-popup']}>
+        <div className={styles['jh-settings-popup']} style={{ 
+          maxHeight: '80vh',
+          overflowY: 'auto'
+        }}>
           <div className={styles['jh-settings-header']}>
             <div style={{ fontWeight: 'bold', fontSize: '14px' }}>⚙️ Настройки Jira Helper</div>
             <button
@@ -336,7 +339,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
             </button>
           </div>
 
-          {/* ✅ ОБНОВЛЕНО: Добавлена новая вкладка "Перегрузка" */}
           <div className={styles['jh-settings-tabs']}>
             <button
               onClick={() => setSettingsTab('columns')}
@@ -351,10 +353,10 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
               👥 Исполнители
             </button>
             <button
-              onClick={() => setSettingsTab('overload')}
-              className={settingsTab === 'overload' ? styles['jh-tab-active'] : styles['jh-tab']}
+              onClick={() => setSettingsTab('wip-limits')}
+              className={settingsTab === 'wip-limits' ? styles['jh-tab-active'] : styles['jh-tab']}
             >
-              ⚠️ Перегрузка
+              ⚠️ Персональные WIP-Limits
             </button>
           </div>
 
@@ -633,8 +635,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
               </div>
             )}
 
-            {/* ✅ ДОБАВЛЕНО: Новая вкладка "Перегрузка" */}
-            {settingsTab === 'overload' && <OverloadSettings />}
+            {settingsTab === 'wip-limits' && <PersonalWipLimits />}
           </div>
 
           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
