@@ -5,6 +5,8 @@ import { applyColumnColors, removeColumnColors } from '../columnColors';
 import { settingsManager } from '../../core/SettingsManager';
 import styles from './styles.module.css';
 import { visualizationManager } from '../../core/VisualizationManager';
+import { overloadVisualizer } from '../../core/OverloadVisualizer';
+import { OverloadSettings } from './OverloadSettings';
 
 interface RandomColorButtonProps {
   onColorAllCards?: () => void;
@@ -25,7 +27,8 @@ const COLOR_OPTIONS = [
 let counter = 0;
 export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAllCards }) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'columns' | 'assignees'>('columns');
+  // ✅ ДОБАВЛЕНО: Новая вкладка "overload"
+  const [settingsTab, setSettingsTab] = useState<'columns' | 'assignees' | 'overload'>('columns');
   const [columnColorsEnabled, setColumnColorsEnabled] = useState(false);
   const [isTogglingColumns, setIsTogglingColumns] = useState(false);
   const [assigneeEnabled, setAssigneeEnabled] = useState(false);
@@ -34,13 +37,18 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
   const [showAssigneesList, setShowAssigneesList] = useState(false);
   const [assigneesList, setAssigneesList] = useState<any[]>([]);
   const [showColorPickerFor, setShowColorPickerFor] = useState<string | null>(null);
-  
+
+  // ✅ ДОБАВЛЕНО: Состояние для фичи перегрузки
+  const [overloadEnabled, setOverloadEnabled] = useState(true);
+
   // Функция для загрузки настроек
   const loadSettings = useCallback(() => {
     const currentSettings = settingsManager.getSettings();
     setColumnColorsEnabled(currentSettings.columnColors.enabled);
     setAssigneeEnabled(currentSettings.assigneeHighlight.enabled);
     setSelectedVizType(currentSettings.assigneeHighlight.visualizationType);
+    // ✅ ДОБАВЛЕНО: Загружаем состояние перегрузки
+    setOverloadEnabled(currentSettings.assigneeOverload.enabled);
   }, []);
 
   // Функция для загрузки списка исполнителей
@@ -64,19 +72,25 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
   // Инициализация при загрузке
   useEffect(() => {
     loadSettings();
-    
+
     // Автоприменение сохранённых настроек
     setTimeout(() => {
       const currentSettings = settingsManager.getSettings();
-      
+
       if (currentSettings.columnColors.enabled) {
         console.log('[Jira Helper] Автоприменение цветов колонок');
         applyColumnColors();
       }
-      
+
       if (currentSettings.assigneeHighlight.enabled) {
         console.log('[Jira Helper] Автоприменение подсветки исполнителей');
         visualizationManager.enable();
+      }
+
+      // ✅ ДОБАВЛЕНО: Автоприменение перегрузки
+      if (currentSettings.assigneeOverload.enabled) {
+        console.log('[Jira Helper] Автоприменение перегрузки исполнителей');
+        overloadVisualizer.setEnabled(true);
       }
     }, 800);
   }, [loadSettings]);
@@ -91,30 +105,35 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
   const handleResetColors = () => {
     console.log('[Jira Helper] Сброс цветов');
     restoreOriginalColors();
-    
+
     // Переприменяем активные фичи после сброса
     if (columnColorsEnabled) {
       setTimeout(() => applyColumnColors(), 300);
     }
-    
+
     if (assigneeEnabled) {
       setTimeout(() => visualizationManager.updateVisualization(), 300);
+    }
+
+    // ✅ ДОБАВЛЕНО: Переприменяем перегрузку если включена
+    if (overloadEnabled) {
+      setTimeout(() => overloadVisualizer.update(), 300);
     }
   };
 
   const handleToggleColumnColors = () => {
     if (isTogglingColumns) return;
-    
+
     const newState = !columnColorsEnabled;
     setIsTogglingColumns(true);
     setColumnColorsEnabled(newState);
     settingsManager.updateSettings({
       columnColors: {
         ...settingsManager.getSettings().columnColors,
-        enabled: newState
-      }
+        enabled: newState,
+      },
     });
-    
+
     if (newState) {
       setTimeout(() => {
         applyColumnColors();
@@ -128,15 +147,15 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
 
   const handleAssigneeToggle = (enabled: boolean) => {
     console.log(`[Jira Helper] Переключаем подсветку исполнителей: ${enabled}`);
-    
+
     setAssigneeEnabled(enabled);
     settingsManager.updateSettings({
       assigneeHighlight: {
         ...settingsManager.getSettings().assigneeHighlight,
-        enabled
-      }
+        enabled,
+      },
     });
-    
+
     if (enabled) {
       visualizationManager.enable();
     } else {
@@ -144,52 +163,77 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
     }
   };
 
-  const handleVizTypeChange = useCallback((newType: 'stripe' | 'background' | 'border') => {
-    setSelectedVizType(newType);
-    
+  // ✅ ДОБАВЛЕНО: Переключение фичи перегрузки
+  const handleOverloadToggle = (enabled: boolean) => {
+    console.log(`[Jira Helper] Переключаем перегрузку исполнителей: ${enabled}`);
+
+    setOverloadEnabled(enabled);
     settingsManager.updateSettings({
-      assigneeHighlight: {
-        ...settingsManager.getSettings().assigneeHighlight,
-        visualizationType: newType
-      }
+      assigneeOverload: {
+        ...settingsManager.getSettings().assigneeOverload,
+        enabled,
+      },
     });
-    
-    if (assigneeEnabled) {
-      visualizationManager.updateVisualization();
+
+    if (enabled) {
+      overloadVisualizer.setEnabled(true);
+    } else {
+      overloadVisualizer.setEnabled(false);
     }
-  }, [assigneeEnabled]);
+  };
+
+  const handleVizTypeChange = useCallback(
+    (newType: 'stripe' | 'background' | 'border') => {
+      setSelectedVizType(newType);
+
+      settingsManager.updateSettings({
+        assigneeHighlight: {
+          ...settingsManager.getSettings().assigneeHighlight,
+          visualizationType: newType,
+        },
+      });
+
+      if (assigneeEnabled) {
+        visualizationManager.updateVisualization();
+      }
+    },
+    [assigneeEnabled]
+  );
 
   // НОВАЯ ФУНКЦИЯ: Выбор цвета для исполнителя
-  const handleColorSelect = useCallback((assigneeId: string, color: string) => {
-    console.log(`[Jira Helper] Выбран цвет ${color} для исполнителя ${assigneeId}`);
-    
-    // Сохраняем в настройки
-    const currentSettings = settingsManager.getSettings();
-    const newCustomColors = {
-      ...currentSettings.assigneeHighlight.customColors,
-      [assigneeId]: color
-    };
-    
-    settingsManager.updateSettings({
-      assigneeHighlight: {
-        ...currentSettings.assigneeHighlight,
-        customColors: newCustomColors
+  const handleColorSelect = useCallback(
+    (assigneeId: string, color: string) => {
+      console.log(`[Jira Helper] Выбран цвет ${color} для исполнителя ${assigneeId}`);
+
+      // Сохраняем в настройки
+      const currentSettings = settingsManager.getSettings();
+      const newCustomColors = {
+        ...currentSettings.assigneeHighlight.customColors,
+        [assigneeId]: color,
+      };
+
+      settingsManager.updateSettings({
+        assigneeHighlight: {
+          ...currentSettings.assigneeHighlight,
+          customColors: newCustomColors,
+        },
+      });
+
+      // Закрываем пикер
+      setShowColorPickerFor(null);
+
+      // Обновляем визуализацию если включена
+      if (assigneeEnabled) {
+        setTimeout(() => {
+          visualizationManager.updateVisualization();
+        }, 100);
       }
-    });
-    
-    // Закрываем пикер
-    setShowColorPickerFor(null);
-    
-    // Обновляем визуализацию если включена
-    if (assigneeEnabled) {
-      setTimeout(() => {
-        visualizationManager.updateVisualization();
-      }, 100);
-    }
-    
-    // Обновляем список исполнителей
-    loadAssigneesList();
-  }, [assigneeEnabled, loadAssigneesList]);
+
+      // Обновляем список исполнителей
+      loadAssigneesList();
+    },
+    [assigneeEnabled, loadAssigneesList]
+  );
 
   // НОВАЯ ФУНКЦИЯ: Получить текущий цвет исполнителя
   const getCurrentColor = useCallback((assigneeId: string) => {
@@ -210,11 +254,11 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
           gap: '4px',
         }}
         title="Сбросить цвета к исходным"
-        onMouseEnter={(e) => {
+        onMouseEnter={e => {
           e.currentTarget.style.backgroundColor = '#f0f0f0';
           e.currentTarget.style.border = '1px solid #ddd';
         }}
-        onMouseLeave={(e) => {
+        onMouseLeave={e => {
           e.currentTarget.style.backgroundColor = 'inherit';
           e.currentTarget.style.border = '1px solid transparent';
         }}
@@ -237,28 +281,27 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
           opacity: isTogglingColumns ? 0.6 : 1,
           cursor: isTogglingColumns ? 'wait' : 'pointer',
         }}
-        title={isTogglingColumns 
-          ? "Идет переключение..." 
-          : columnColorsEnabled 
-            ? "Выключить цвета колонок" 
-            : "Включить цвета колонок"
+        title={
+          isTogglingColumns
+            ? 'Идет переключение...'
+            : columnColorsEnabled
+              ? 'Выключить цвета колонок'
+              : 'Включить цвета колонок'
         }
-        onMouseEnter={(e) => {
+        onMouseEnter={e => {
           if (!isTogglingColumns && !columnColorsEnabled) {
             e.currentTarget.style.backgroundColor = '#f0f0f0';
             e.currentTarget.style.border = '1px solid #ddd';
           }
         }}
-        onMouseLeave={(e) => {
+        onMouseLeave={e => {
           if (!isTogglingColumns && !columnColorsEnabled) {
             e.currentTarget.style.backgroundColor = 'inherit';
             e.currentTarget.style.border = '1px solid transparent';
           }
         }}
       >
-        <span>
-          {isTogglingColumns ? '⏳' : columnColorsEnabled ? '📊 Колонки (вкл)' : '📊 Колонки'}
-        </span>
+        <span>{isTogglingColumns ? '⏳' : columnColorsEnabled ? '📊 Колонки (вкл)' : '📊 Колонки'}</span>
       </button>
 
       {/* Кнопка "Настройки" */}
@@ -283,9 +326,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
       {showSettings && (
         <div className={styles['jh-settings-popup']}>
           <div className={styles['jh-settings-header']}>
-            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
-              ⚙️ Настройки Jira Helper
-            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>⚙️ Настройки Jira Helper</div>
             <button
               onClick={() => setShowSettings(false)}
               className={styles['jh-settings-close']}
@@ -294,7 +335,8 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
               ×
             </button>
           </div>
-          
+
+          {/* ✅ ОБНОВЛЕНО: Добавлена новая вкладка "Перегрузка" */}
           <div className={styles['jh-settings-tabs']}>
             <button
               onClick={() => setSettingsTab('columns')}
@@ -308,26 +350,27 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
             >
               👥 Исполнители
             </button>
+            <button
+              onClick={() => setSettingsTab('overload')}
+              className={settingsTab === 'overload' ? styles['jh-tab-active'] : styles['jh-tab']}
+            >
+              ⚠️ Перегрузка
+            </button>
           </div>
-          
+
           <div className={styles['jh-settings-content']}>
+            {/* Вкладка "Колонки" (без изменений) */}
             {settingsTab === 'columns' && (
               <div>
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={columnColorsEnabled}
-                      onChange={handleToggleColumnColors}
-                    />
+                    <input type="checkbox" checked={columnColorsEnabled} onChange={handleToggleColumnColors} />
                     Включить цвета колонок
                   </label>
                 </div>
-                
+
                 <div style={{ marginBottom: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                    Цвета по умолчанию:
-                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Цвета по умолчанию:</div>
                   <div style={{ display: 'flex', gap: '8px', fontSize: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <div style={{ width: '12px', height: '12px', backgroundColor: 'rgba(0,0,255,0.74)' }} />
@@ -345,7 +388,8 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                 </div>
               </div>
             )}
-            
+
+            {/* Вкладка "Исполнители" (без изменений) */}
             {settingsTab === 'assignees' && (
               <div>
                 <div style={{ marginBottom: '12px' }}>
@@ -353,7 +397,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                     <input
                       type="checkbox"
                       checked={assigneeEnabled}
-                      onChange={(e) => handleAssigneeToggle(e.target.checked)}
+                      onChange={e => handleAssigneeToggle(e.target.checked)}
                     />
                     Включить подсветку исполнителей
                   </label>
@@ -361,19 +405,21 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                     Автоматическая цветная подсветка по исполнителям
                   </div>
                 </div>
-                
+
                 {/* НОВОЕ: Раскрывающийся список исполнителей */}
                 <div style={{ marginBottom: '12px' }}>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: '#666', 
-                    marginBottom: '4px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: '#666',
+                      marginBottom: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <span>Список исполнителей ({assigneesList.length}):</span>
-                    <button 
+                    <button
                       onClick={() => setShowAssigneesList(!showAssigneesList)}
                       style={{
                         background: 'none',
@@ -381,70 +427,77 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                         cursor: 'pointer',
                         fontSize: '12px',
                         color: '#0969da',
-                        padding: '2px 6px'
+                        padding: '2px 6px',
                       }}
                     >
                       {showAssigneesList ? '▲ Скрыть' : '▼ Показать'}
                     </button>
                   </div>
-                  
+
                   {showAssigneesList && (
-                    <div style={{ 
-                      background: '#f6f8fa', 
-                      borderRadius: '6px', 
-                      padding: '8px',
-                      marginBottom: '12px',
-                      maxHeight: '200px',
-                      overflowY: 'auto'
-                    }}>
+                    <div
+                      style={{
+                        background: '#f6f8fa',
+                        borderRadius: '6px',
+                        padding: '8px',
+                        marginBottom: '12px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                      }}
+                    >
                       {assigneesList.length === 0 ? (
                         <div style={{ fontSize: '12px', color: '#888', fontStyle: 'italic', textAlign: 'center' }}>
                           Загрузка исполнителей...
                         </div>
                       ) : (
-                        assigneesList.map((assignee) => (
-                          <div key={assignee.id} style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '4px 0',
-                            borderBottom: '1px solid #e1e4e8'
-                          }}>
+                        assigneesList.map(assignee => (
+                          <div
+                            key={assignee.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '4px 0',
+                              borderBottom: '1px solid #e1e4e8',
+                            }}
+                          >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               {/* АВАТАРКА вместо цветного квадрата */}
                               {assignee.avatarUrl ? (
-                                <img 
+                                <img
                                   src={assignee.avatarUrl}
                                   alt={assignee.displayName}
-                                  style={{ 
-                                    width: '20px', 
-                                    height: '20px', 
+                                  style={{
+                                    width: '20px',
+                                    height: '20px',
                                     borderRadius: '50%',
                                     objectFit: 'cover',
-                                    border: '1px solid #ccc'
-                                  }} 
+                                    border: '1px solid #ccc',
+                                  }}
                                 />
                               ) : assignee.id === 'unassigned' ? (
                                 // Для "Не назначено" - иконка человека
-                                <div style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  borderRadius: '50%',
-                                  backgroundColor: '#f0f0f0',
-                                  border: '1px solid #ccc',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '10px'
-                                }}>
+                                <div
+                                  style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#f0f0f0',
+                                    border: '1px solid #ccc',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '10px',
+                                  }}
+                                >
                                   👤
                                 </div>
                               ) : (
                                 // Fallback: цветной квадрат с инициалами
-                                <div 
-                                  style={{ 
-                                    width: '20px', 
-                                    height: '20px', 
+                                <div
+                                  style={{
+                                    width: '20px',
+                                    height: '20px',
                                     backgroundColor: getCurrentColor(assignee.id) || assignee.color,
                                     border: '1px solid #ccc',
                                     borderRadius: '50%',
@@ -453,24 +506,24 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                                     justifyContent: 'center',
                                     fontSize: '9px',
                                     fontWeight: 'bold',
-                                    color: '#fff'
-                                  }} 
+                                    color: '#fff',
+                                  }}
                                 >
                                   {assignee.displayName.charAt(0)}
                                 </div>
                               )}
-                              
+
                               <span style={{ fontSize: '12px' }}>
                                 {assignee.displayName} ({assignee.name})
                               </span>
                             </div>
-                            
+
                             {/* Кнопка выбора цвета остается */}
                             <div style={{ position: 'relative' }}>
                               <button
-                                onClick={() => setShowColorPickerFor(
-                                  showColorPickerFor === assignee.id ? null : assignee.id
-                                )}
+                                onClick={() =>
+                                  setShowColorPickerFor(showColorPickerFor === assignee.id ? null : assignee.id)
+                                }
                                 style={{
                                   width: '20px',
                                   height: '20px',
@@ -478,37 +531,41 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                                   border: '1px solid #ccc',
                                   borderRadius: '3px',
                                   cursor: 'pointer',
-                                  padding: 0
+                                  padding: 0,
                                 }}
                                 title="Выбрать цвет"
                               />
-                              
+
                               {/* Окно выбора цвета */}
                               {showColorPickerFor === assignee.id && (
-                                <div style={{
-                                  position: 'absolute',
-                                  top: '25px',
-                                  right: '0',
-                                  backgroundColor: 'white',
-                                  border: '1px solid #ccc',
-                                  borderRadius: '4px',
-                                  padding: '6px',
-                                  zIndex: 1000,
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                  width: '140px'
-                                }}>
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '25px',
+                                    right: '0',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    padding: '6px',
+                                    zIndex: 1000,
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                    width: '140px',
+                                  }}
+                                >
                                   <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>
                                     Цвет для {assignee.displayName}:
                                   </div>
-                                  <div style={{ 
-                                    display: 'grid', 
-                                    gridTemplateColumns: 'repeat(4, 1fr)',
-                                    gap: '4px'
-                                  }}>
-                                    {COLOR_OPTIONS.map((color) => (
+                                  <div
+                                    style={{
+                                      display: 'grid',
+                                      gridTemplateColumns: 'repeat(4, 1fr)',
+                                      gap: '4px',
+                                    }}
+                                  >
+                                    {COLOR_OPTIONS.map(color => (
                                       <button
                                         key={color.value}
-                                        onClick={(e) => {
+                                        onClick={e => {
                                           e.stopPropagation();
                                           handleColorSelect(assignee.id, color.value);
                                         }}
@@ -518,7 +575,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                                           backgroundColor: color.value,
                                           border: '1px solid #ccc',
                                           borderRadius: '3px',
-                                          cursor: 'pointer'
+                                          cursor: 'pointer',
                                         }}
                                         title={color.name}
                                       />
@@ -536,34 +593,32 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                     </div>
                   )}
                 </div>
-                
+
                 <div style={{ marginBottom: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                    Тип подсветки:
-                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Тип подсветки:</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input 
-                        type="radio" 
-                        name="visualization" 
+                      <input
+                        type="radio"
+                        name="visualization"
                         checked={selectedVizType === 'stripe'}
                         onChange={() => handleVizTypeChange('stripe')}
                       />
                       Полоска слева
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input 
-                        type="radio" 
-                        name="visualization" 
+                      <input
+                        type="radio"
+                        name="visualization"
                         checked={selectedVizType === 'background'}
                         onChange={() => handleVizTypeChange('background')}
                       />
                       Цвет фона
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input 
-                        type="radio" 
-                        name="visualization" 
+                      <input
+                        type="radio"
+                        name="visualization"
                         checked={selectedVizType === 'border'}
                         onChange={() => handleVizTypeChange('border')}
                       />
@@ -571,14 +626,17 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                     </label>
                   </div>
                 </div>
-                
+
                 <div style={{ fontSize: '11px', color: '#888', marginTop: '12px' }}>
                   Ядро исполнителей инициализируется при включении
                 </div>
               </div>
             )}
+
+            {/* ✅ ДОБАВЛЕНО: Новая вкладка "Перегрузка" */}
+            {settingsTab === 'overload' && <OverloadSettings />}
           </div>
-          
+
           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
             <button
               onClick={() => {
@@ -587,6 +645,12 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                 if (assigneeEnabled) {
                   setTimeout(() => {
                     visualizationManager.updateVisualization();
+                  }, 100);
+                }
+                // ✅ ДОБАВЛЕНО: Обновляем перегрузку при закрытии
+                if (overloadEnabled) {
+                  setTimeout(() => {
+                    overloadVisualizer.update();
                   }, 100);
                 }
               }}

@@ -35,9 +35,9 @@ function updateCandyStripesColors(): void {
 
 export function saveOriginalColors(): void {
   if (originalColorsSaved) return;
-  
+
   const cards = BoardPagePageObject.getAllCloudCards();
-  
+
   cards.forEach(card => {
     const computedStyle = window.getComputedStyle(card);
     const originalColor = computedStyle.backgroundColor || 'white';
@@ -55,7 +55,7 @@ export function saveOriginalColors(): void {
 
     card.dataset.originalTransition = card.style.transition;
   });
-  
+
   originalColorsSaved = true;
   console.log('[Jira Helper] Сохранены исходные цвета карточек');
 }
@@ -165,7 +165,7 @@ declare global {
 export function restoreOriginalColors(): void {
   const cards = BoardPagePageObject.getAllCloudCards();
   let restoredCards = 0;
-  
+
   cards.forEach(card => {
     if (card.dataset.originalColor) {
       card.style.backgroundColor = card.dataset.originalColor;
@@ -181,7 +181,7 @@ export function restoreOriginalColors(): void {
     } else {
       card.style.transition = '';
     }
-    
+
     const cardBody = card.querySelector<HTMLElement>(
       '[data-testid="software-context-menu.ui.context-menu.children-wrapper"] > div'
     );
@@ -196,21 +196,21 @@ export function restoreOriginalColors(): void {
       cardBody.style.transition = '';
     }
   });
-  
+
   // Обновляем цвета полосок после восстановления
   updateCandyStripesColors();
-  
+
   console.log(`[Jira Helper] Восстановлены исходные цвета ${restoredCards} карточек`);
 }
 
 export function resetOriginalColors(): void {
   originalColorsSaved = false;
   const cards = BoardPagePageObject.getAllCloudCards();
-  
+
   cards.forEach(card => {
     delete card.dataset.originalColor;
     delete card.dataset.originalTransition;
-    
+
     const cardBody = card.querySelector<HTMLElement>(
       '[data-testid="software-context-menu.ui.context-menu.children-wrapper"] > div'
     );
@@ -218,13 +218,13 @@ export function resetOriginalColors(): void {
       delete cardBody.dataset.originalColor;
     }
   });
-  
+
   console.log('[Jira Helper] Сброшены сохраненные цвета');
 }
 
 export function applyColorsWithColumnPriority(): void {
   const columnColorsEnabled = localStorage.getItem('jira-helper-column-colors-enabled') === 'true';
-  
+
   if (columnColorsEnabled) {
     import('../columnColors').then(({ applyColumnColors }) => {
       applyColumnColors();

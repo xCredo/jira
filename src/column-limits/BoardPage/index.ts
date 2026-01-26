@@ -1,10 +1,11 @@
 import map from '@tinkoff/utils/array/map';
+import React from 'react';
 import { PageModification } from '../../shared/PageModification';
 import { BOARD_PROPERTIES } from '../../shared/constants';
 import { mergeSwimlaneSettings } from '../../swimlane/utils';
 import { findGroupByColumnId, generateColorByFirstChars } from '../shared/utils';
 import styles from './styles.module.css';
-import React from 'react';
+import { initializeCore } from '../../core';
 
 interface EditData {
   rapidListConfig: {
@@ -54,11 +55,11 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
     return Promise.race([
       this.waitForElement('.ghx-column-header-group'),
       this.waitForElement('[data-testid="filter-refinement.ui.filter-popup.button"]'),
-      new Promise<Element>(resolve => 
+      new Promise<Element>(resolve =>
         setTimeout(() => {
           resolve(document.body);
         }, 8000)
-      )
+      ),
     ]);
   }
 
@@ -88,7 +89,7 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
       this.styleColumnHeaders();
       this.styleColumnsWithLimitations();
     });
-    
+
     this.mountRandomColorButton();
   }
 
@@ -108,6 +109,7 @@ export default class extends PageModification<[EditData?, BoardGroup?, Swimlanes
             import('react-dom/client').then(({ createRoot }) => {
               const root = createRoot(container);
               root.render(React.createElement(RandomColorButton));
+              initializeCore();
             });
           });
         }

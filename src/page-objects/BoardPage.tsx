@@ -145,7 +145,7 @@ export const BoardPagePageObject: IBoardPagePageObject = {
   getHtml(): string {
     return document.body.innerHTML;
   },
-  
+
   getAllCloudCards(): HTMLElement[] {
     return Array.from(document.querySelectorAll<HTMLElement>(this.selectors.issueCardCloud));
   },

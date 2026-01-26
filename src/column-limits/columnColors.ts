@@ -24,7 +24,7 @@ declare global {
 function paintCard(card: HTMLElement, color: string): void {
   card.style.backgroundColor = color;
   card.style.setProperty('background-color', color, 'important');
-  
+
   const innerCard = card.querySelector<HTMLElement>(
     '[data-testid="software-context-menu.ui.context-menu.children-wrapper"] > div'
   );
@@ -32,7 +32,7 @@ function paintCard(card: HTMLElement, color: string): void {
     innerCard.style.backgroundColor = color;
     innerCard.style.setProperty('background-color', color, 'important');
   }
-  
+
   // Добавляем полоску к карточке
   candyStripeManager.addStripeToCard(card, color);
 }
@@ -40,7 +40,7 @@ function paintCard(card: HTMLElement, color: string): void {
 export function applyColumnColors(colors: Partial<ColumnColors> = {}): void {
   window._jhDebugApply = (window._jhDebugApply || 0) + 1;
   console.log(`[Jira Helper] applyColumnColors вызван #${window._jhDebugApply}`);
-  
+
   window._jhColumnColorsEnabled = true;
   const finalColors = { ...DEFAULT_COLORS, ...colors };
 
@@ -48,7 +48,7 @@ export function applyColumnColors(colors: Partial<ColumnColors> = {}): void {
     try {
       const cards = BoardPagePageObject.getAllCloudCards();
       console.log('[Jira Helper] Карточек для покраски:', cards.length);
-      
+
       if (cards.length === 0) {
         console.log('[Jira Helper] Карточек нет, пробуем через 300ms');
         setTimeout(doPaint, 300);
@@ -58,15 +58,15 @@ export function applyColumnColors(colors: Partial<ColumnColors> = {}): void {
       const cardsArray = Array.from(cards);
       const cardsWithPos = cardsArray.map(card => ({
         card,
-        left: card.getBoundingClientRect().left
+        left: card.getBoundingClientRect().left,
       }));
-      
+
       cardsWithPos.sort((a, b) => a.left - b.left);
 
       const columns: HTMLElement[][] = [];
       let currentColumn: HTMLElement[] = [];
       let prevLeft = cardsWithPos[0].left;
-      
+
       cardsWithPos.forEach(({ card, left }) => {
         if (Math.abs(left - prevLeft) > 150 && currentColumn.length > 0) {
           columns.push([...currentColumn]);
@@ -75,27 +75,27 @@ export function applyColumnColors(colors: Partial<ColumnColors> = {}): void {
         currentColumn.push(card);
         prevLeft = left;
       });
-      
+
       if (currentColumn.length > 0) {
         columns.push(currentColumn);
       }
-      
+
       console.log('[Jira Helper] Определено колонок:', columns.length);
 
       // ВКЛЮЧАЕМ ПОЛОСКИ
       candyStripeManager.enable();
-      
+
       columns.forEach((columnCards, index) => {
         let color: string;
-        
+
         if (index === 0) color = finalColors.todo;
         else if (index === columns.length - 1) color = finalColors.done;
         else color = finalColors.inProgress;
-        
+
         console.log(`[Jira Helper] Колонка ${index}: ${columnCards.length} карточек`);
         columnCards.forEach(card => paintCard(card, color));
       });
-      
+
       console.log('[Jira Helper] Покраска завершена успешно');
     } catch (error) {
       console.error('[Jira Helper] Ошибка покраски:', error);
@@ -107,17 +107,17 @@ export function applyColumnColors(colors: Partial<ColumnColors> = {}): void {
 
 export function removeColumnColors(): void {
   window._jhColumnColorsEnabled = false;
-  
+
   // ВЫКЛЮЧАЕМ ПОЛОСКИ
   candyStripeManager.disable();
-  
+
   const cards = BoardPagePageObject.getAllCloudCards();
   let clearedCards = 0;
-  
+
   cards.forEach(card => {
     card.style.backgroundColor = '';
     card.style.removeProperty('background-color');
-    
+
     const cardBody = card.querySelector<HTMLElement>(
       '[data-testid="software-context-menu.ui.context-menu.children-wrapper"] > div'
     );
@@ -125,10 +125,10 @@ export function removeColumnColors(): void {
       cardBody.style.backgroundColor = '';
       cardBody.style.removeProperty('background-color');
     }
-    
+
     clearedCards++;
   });
-  
+
   console.log(`[Jira Helper] Очищены цвета у ${clearedCards} карточек`);
 }
 
@@ -145,22 +145,24 @@ export function checkColumnColorsApplied(): boolean {
   if (cards.length === 0) return false;
 
   let coloredCards = 0;
-  
+
   cards.forEach(card => {
     const bgColor = window.getComputedStyle(card).backgroundColor;
-    const isColored = !(bgColor === 'rgba(0, 0, 0, 0)' || 
-                       bgColor === 'transparent' || 
-                       bgColor === 'rgb(255, 255, 255)');
+    const isColored = !(
+      bgColor === 'rgba(0, 0, 0, 0)' ||
+      bgColor === 'transparent' ||
+      bgColor === 'rgb(255, 255, 255)'
+    );
     if (isColored) coloredCards++;
   });
-  
+
   const applied = coloredCards > cards.length / 2;
-  
+
   console.log('[Jira Helper] Проверка покраски:', {
     totalCards: cards.length,
     coloredCards,
-    applied
+    applied,
   });
-  
+
   return applied;
 }

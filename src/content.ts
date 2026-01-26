@@ -55,12 +55,11 @@ function initDiContainer() {
 }
 
 async function start() {
-  if (!isJira)
-    {
-      console.log('NOTT JiRA')
-      return;
-    }
-  console.log('Jira')
+  if (!isJira) {
+    console.log('NOTT JiRA');
+    return;
+  }
+  console.log('Jira');
   initBlurSensitive();
   extensionApiService.sendMessage({ message: 'jira-helper-inited' });
 

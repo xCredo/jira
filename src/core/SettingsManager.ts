@@ -4,12 +4,12 @@ export interface AssigneeHighlightSettings {
   visualizationType: 'stripe' | 'background' | 'border';
   autoColors: boolean;
 
-  customColors: Record<string, string>;          // Цвет рамки/полоски (полный)
+  customColors: Record<string, string>; // Цвет рамки/полоски (полный)
   customBackgroundColors: Record<string, string>; // Цвет фона (с прозрачностью)
-  
+
   highlightUnassigned: boolean;
-  unassignedColor: string;                       // Цвет для "Не назначено" (рамка/полоска)
-  unassignedBackgroundColor: string;            // Фон для "Не назначено"
+  unassignedColor: string; // Цвет для "Не назначено" (рамка/полоска)
+  unassignedBackgroundColor: string; // Фон для "Не назначено"
 }
 
 export interface ColumnColorsSettings {
@@ -19,10 +19,17 @@ export interface ColumnColorsSettings {
 export interface Settings {
   columnColors: ColumnColorsSettings;
   assigneeHighlight: AssigneeHighlightSettings;
+  assigneeOverload: {
+    enabled: boolean;
+    threshold: number; // Минимальное количество задач для перегрузки (по умолчанию 2)
+    borderColor: string; // Цвет рамки (по умолчанию #000000)
+    borderWidth: string; // Толщина рамки (по умолчанию 3px)
+  };
 }
 
 export class SettingsManager {
   private static instance: SettingsManager;
+
   private settings: Settings;
 
   private constructor() {
@@ -46,10 +53,10 @@ export class SettingsManager {
       ...updates,
       assigneeHighlight: {
         ...this.settings.assigneeHighlight,
-        ...updates.assigneeHighlight
-      }
+        ...updates.assigneeHighlight,
+      },
     };
-    
+
     this.saveSettings();
   }
 
@@ -69,37 +76,56 @@ export class SettingsManager {
     try {
       const saved = localStorage.getItem('jira-helper-settings');
       if (saved) {
-        return JSON.parse(saved);
+        // Если есть сохранённые настройки, добавляем дефолтные для assigneeOverload
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          assigneeOverload: parsed.assigneeOverload || {
+            enabled: true,
+            threshold: 2,
+            borderColor: '#000000',
+            borderWidth: '3px',
+          },
+        };
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('[Jira Helper] Ошибка загрузки настроек:', error);
     }
 
-    // Настройки по умолчанию
+    // Настройки по умолчанию (ПОЛНЫЙ объект)
     return {
-    columnColors: {
-        enabled: false
-    },
-    assigneeHighlight: {
+      columnColors: {
+        enabled: false,
+      },
+      assigneeHighlight: {
         enabled: false,
         visualizationType: 'stripe',
         autoColors: true,
-        customColors: {},           // Для рамки/полоски
-        customBackgroundColors: {}, // Для фона
+        customColors: {},
+        customBackgroundColors: {},
         highlightUnassigned: true,
-        unassignedColor: 'rgba(0, 0, 0, 0.5)',      // Чёрный 50% для рамки
-        unassignedBackgroundColor: 'rgba(0, 0, 0, 0.1)' // Чёрный 20% для фона
-    }
+        unassignedColor: 'rgba(0, 0, 0, 0.5)',
+        unassignedBackgroundColor: 'rgba(0, 0, 0, 0.1)',
+      },
+      assigneeOverload: {
+        // ✅ ДОБАВЛЕНО
+        enabled: true,
+        threshold: 2,
+        borderColor: '#000000',
+        borderWidth: '3px',
+      },
     };
   }
 
-    public saveSettings(): void {
-        try {
-        localStorage.setItem('jira-helper-settings', JSON.stringify(this.settings));
-        } catch (error) {
-        console.error('[Jira Helper] Ошибка сохранения настроек:', error);
-        }
+  public saveSettings(): void {
+    try {
+      localStorage.setItem('jira-helper-settings', JSON.stringify(this.settings));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[Jira Helper] Ошибка сохранения настроек:', error);
     }
+  }
 }
 
 export const settingsManager = SettingsManager.getInstance();

@@ -47,8 +47,7 @@ export function processCard({ card, processedAttribute }: ProcessCardOptions): v
   if (color === 'transparent' || color === 'rgba(0, 0, 0, 0)' || color === '') {
     // Дефолтный цвет, красим в желтый
     card.style.setProperty('background-color', 'rgba(255, 255, 0, 1)', 'important');
-  } 
-  else {
+  } else {
   }
 
   markCardAsProcessed(card, processedAttribute);
