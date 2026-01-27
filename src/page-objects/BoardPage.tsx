@@ -156,3 +156,7 @@ export const boardPagePageObjectToken = new Token<IBoardPagePageObject>('boardPa
 export const registerBoardPagePageObjectInDI = (container: Container) => {
   container.register({ token: boardPagePageObjectToken, value: BoardPagePageObject });
 };
+
+if (!window.JiraHelper) window.JiraHelper = {}
+
+window.JiraHelper.BoardPagePageObject = BoardPagePageObject

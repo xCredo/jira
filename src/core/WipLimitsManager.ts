@@ -27,13 +27,17 @@ export class WipLimitsManager {
   }
 
   update() {
+    this.loadSettings()
     if (!this.enabled || this.limits.length === 0) {
+      console.log('!this.enabled || this.limits.length === 0')
+      console.log(!this.enabled);
+      console.log(this.limits.length);
       this.clearWipIndicators();
       return;
     }
 
     console.log('[WipLimitsManager] Проверяем WIP лимиты...');
-    
+    debugger;
     this.limits.forEach(limit => {
       const { exceeded, currentCount } = this.checkLimit(limit);
       
@@ -50,8 +54,8 @@ export class WipLimitsManager {
     try {
       const cards = this.getAllCards();
       const assigneeCards = cards.filter(card => {
-        const cardAssigneeId = assigneeManager.getCardAssigneeId(card);
-        return cardAssigneeId === limit.userId;
+        const cardAssignee = assigneeManager.getAssigneeForCard(card);
+        return cardAssignee?.id === limit.userId;
       });
 
       // Фильтруем по выбранным колонкам
@@ -72,6 +76,7 @@ export class WipLimitsManager {
   }
 
   private getAllCards(): HTMLElement[] {
+    
     const BoardPagePageObject = (window as any).JiraHelper?.BoardPagePageObject;
     if (BoardPagePageObject) {
       return Array.from(BoardPagePageObject.getAllCloudCards() || []);
@@ -84,8 +89,8 @@ export class WipLimitsManager {
     const cards = this.getAllCards();
     
     cards.forEach(card => {
-      const cardAssigneeId = assigneeManager.getCardAssigneeId(card);
-      if (cardAssigneeId === assigneeId) {
+      const cardAssignee = assigneeManager.getAssigneeForCard(card);
+      if (cardAssignee?.id === assigneeId) {
         if (overloaded) {
           card.setAttribute('data-jh-wip-overloaded', 'true');
           // Добавляем специальный класс для CSS
@@ -115,3 +120,7 @@ export class WipLimitsManager {
 }
 
 export const wipLimitsManager = new WipLimitsManager();
+
+if (!window.JiraHelper) window.JiraHelper = {}
+
+window.JiraHelper.WipLimitsManager = wipLimitsManager

@@ -110,7 +110,7 @@ export const PersonalWipLimits: React.FC = () => {
     settingsManager.updateSettings({
       personalWipLimits: {
         enabled: true,
-        limits: updatedLimits
+        limits: updatedLimits,
       }
     });
 
@@ -137,7 +137,9 @@ export const PersonalWipLimits: React.FC = () => {
   };
 
   const updateVisualization = () => {
+    console.log('if (window.JiraHelper?.WipLimitsManager)')
     if (window.JiraHelper?.WipLimitsManager) {
+      console.log('window.JiraHelper.WipLimitsManager.update()')
       window.JiraHelper.WipLimitsManager.update();
     }
   };

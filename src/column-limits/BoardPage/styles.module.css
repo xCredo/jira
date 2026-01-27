@@ -382,7 +382,7 @@
 }
 
 /* Стили для WIP перегрузки */
-[data-assignee-highlight="true"].jh-wip-overloaded {
+:global(.jh-wip-overloaded) {
   animation: jh-pulse-warning 2s infinite !important;
   border-width: 4px !important; /* Толще обычного */
   box-shadow: 
@@ -399,7 +399,7 @@
 }
 
 /* Добавляем значок перегрузки */
-[data-assignee-highlight="true"].jh-wip-overloaded::before {
+:global(.jh-wip-overloaded::before) {
   content: '⏱️'; /* Или ⚠️ или 📈 */
   position: absolute;
   top: 5px;
