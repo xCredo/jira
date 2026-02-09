@@ -282,9 +282,20 @@ export const PersonalWipLimits: React.FC = () => {
               type="number"
               min="1"
               max="20"
-              value={limitValue}
-              onChange={(e) => setLimitValue(parseInt(e.target.value) || 1)}
+              value={limitValue === 0 ? '' : limitValue} // Показываем пустую строку вместо 0
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  setLimitValue(0);
+                } else {
+                  const num = parseInt(value);
+                  if (!isNaN(num) && num > 0 && num <= 20) {
+                    setLimitValue(num);
+                  }
+                }
+              }}
               className={styles['wip-limit-input']}
+              placeholder="Введите число"
             />
             <p className={styles['wip-limit-description']}>
               Не более {limitValue} задач в сумме со всех выбранных колонок

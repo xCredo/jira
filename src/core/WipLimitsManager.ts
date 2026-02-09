@@ -30,18 +30,15 @@ export class WipLimitsManager {
   update() {
     this.loadSettings()
     if (!this.enabled || this.limits.length === 0) {
-      console.log('!this.enabled || this.limits.length === 0')
-      console.log(!this.enabled);
-      console.log(this.limits.length);
       this.clearWipIndicators();
       return;
     }
 
     console.log('[WipLimitsManager] Загружено лимитов:', this.limits.length);
-    console.log('[WipLimitsManager] Проверяем WIP лимиты...');
     
     this.limits.forEach(limit => {
-      console.log(`  - ${limit.userName}: цвет=${limit.color}, лимит=${limit.limit}`);
+      console.log(`Проверяем ${limit.userName}: цвет=${limit.color}, лимит=${limit.limit}, колонки=${limit.columnNames.join(',')}`);
+      
       const { 
         exceeded, 
         currentCount, 
@@ -49,17 +46,18 @@ export class WipLimitsManager {
         allUserCards 
       } = this.checkLimit(limit);
       
-      console.log(`    Карточек пользователя: ${allUserCards.length}, в выбранных колонках: ${currentCount}`);
+      console.log(`  Результат: exceeded=${exceeded}, currentCount=${currentCount}, cardsInLimitedColumns=${cardsInLimitedColumns.length}`);
       
       if (exceeded) {
-        console.log(`⚠️ ${limit.userName} превысил лимит: ${currentCount}/${limit.limit} в колонках ${limit.columnNames.join(', ')}`);
+        console.log(`⚠️ ${limit.userName} превысил лимит: ${currentCount}/${limit.limit}`);
         
         // Красим ТОЛЬКО карточки в выбранных колонках
         cardsInLimitedColumns.forEach(card => {
+          console.log(`  Окрашиваем карточку в колонке ${columnManager.getCardColumnId(card)}`);
           this.markCardAsOverloaded(card, true, limit.color);
         });
         
-        // Очищаем остальные карточки пользователя (если они были окрашены ранее)
+        // Очищаем остальные карточки пользователя
         allUserCards.forEach(card => {
           if (!cardsInLimitedColumns.includes(card)) {
             this.markCardAsOverloaded(card, false);
@@ -67,6 +65,8 @@ export class WipLimitsManager {
         });
         
       } else {
+        console.log(`✅ ${limit.userName} в рамках лимита: ${currentCount}/${limit.limit}`);
+        
         // Снимаем окраску со ВСЕХ карточек пользователя
         allUserCards.forEach(card => {
           this.markCardAsOverloaded(card, false);
@@ -96,15 +96,21 @@ export class WipLimitsManager {
           const columnId = columnManager.getCardColumnId(card);
           if (columnId && limit.columnIds.includes(columnId)) {
             cardsInLimitedColumnsCount++;
-            cardsInLimitedColumns.push(card); //
+            cardsInLimitedColumns.push(card);
           }
         }
       });
 
+      console.log(`[WipLimitsManager] Проверка лимита для ${limit.userName}:`);
+      console.log(`  - Лимит: ${limit.limit}`);
+      console.log(`  - В выбранных колонках: ${cardsInLimitedColumnsCount} карточки`);
+      console.log(`  - Всего карточек пользователя: ${userCards.length}`);
+      console.log(`  - exceeded = ${cardsInLimitedColumnsCount} > ${limit.limit} = ${cardsInLimitedColumnsCount > limit.limit}`);
+
       return {
         exceeded: cardsInLimitedColumnsCount > limit.limit,
         currentCount: cardsInLimitedColumnsCount,
-        cardsInLimitedColumns: cardsInLimitedColumns, //
+        cardsInLimitedColumns: cardsInLimitedColumns,
         allUserCards: userCards
       };
 

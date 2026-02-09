@@ -227,6 +227,9 @@ export class ColumnManager {
       prevLeft = cardsWithPos[i].left;
     }
     
+    console.log(`Проверка карточки: columnId=${columnId}, limit.columnIds=${JSON.stringify(limit.columnIds)}`);
+    console.log(`Включена ли колонка? ${limit.columnIds.includes(columnId!)}`);
+
     return null;
   }
 }
