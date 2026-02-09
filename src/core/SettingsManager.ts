@@ -16,6 +16,20 @@ export interface ColumnColorsSettings {
   enabled: boolean;
 }
 
+// ДОБАВИТЬ: Интерфейс для WIP-лимитов
+export interface WipLimitSettings {
+  enabled: boolean;
+  limits: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    columnIds: string[];
+    columnNames: string[];
+    limit: number;
+    color: string; // ← Цвет для WIP-подсветки
+  }>;
+}
+
 export interface Settings {
   columnColors: ColumnColorsSettings;
   assigneeHighlight: AssigneeHighlightSettings;
@@ -25,6 +39,7 @@ export interface Settings {
     borderColor: string; // Цвет рамки (по умолчанию #000000)
     borderWidth: string; // Толщина рамки (по умолчанию 3px)
   };
+  personalWipLimits: WipLimitSettings; // ← ДОБАВИТЬ
 }
 
 export class SettingsManager {
@@ -55,6 +70,10 @@ export class SettingsManager {
         ...this.settings.assigneeHighlight,
         ...updates.assigneeHighlight,
       },
+      personalWipLimits: {
+        ...this.settings.personalWipLimits,
+        ...updates.personalWipLimits,
+      },
     };
 
     this.saveSettings();
@@ -72,24 +91,50 @@ export class SettingsManager {
     this.saveSettings();
   }
 
+  // ДОБАВИТЬ: Метод для обновления цвета WIP-лимита
+  setWipLimitColor(limitId: string, color: string): void {
+    if (this.settings.personalWipLimits?.limits) {
+      const index = this.settings.personalWipLimits.limits.findIndex(l => l.id === limitId);
+      if (index !== -1) {
+        this.settings.personalWipLimits.limits[index].color = color;
+        this.saveSettings();
+      }
+    }
+  }
+
   private loadSettings(): Settings {
     try {
       const saved = localStorage.getItem('jira-helper-settings');
       if (saved) {
-        // Если есть сохранённые настройки, добавляем дефолтные для assigneeOverload
         const parsed = JSON.parse(saved);
+        
+        // Обеспечиваем обратную совместимость
         return {
-          ...parsed,
+          columnColors: parsed.columnColors || { enabled: false },
+          assigneeHighlight: {
+            enabled: parsed.assigneeHighlight?.enabled || false,
+            visualizationType: parsed.assigneeHighlight?.visualizationType || 'stripe',
+            autoColors: parsed.assigneeHighlight?.autoColors !== false,
+            customColors: parsed.assigneeHighlight?.customColors || {},
+            customBackgroundColors: parsed.assigneeHighlight?.customBackgroundColors || {},
+            highlightUnassigned: parsed.assigneeHighlight?.highlightUnassigned !== false,
+            unassignedColor: parsed.assigneeHighlight?.unassignedColor || 'rgba(0, 0, 0, 0.5)',
+            unassignedBackgroundColor: parsed.assigneeHighlight?.unassignedBackgroundColor || 'rgba(0, 0, 0, 0.1)',
+          },
           assigneeOverload: parsed.assigneeOverload || {
             enabled: true,
             threshold: 2,
             borderColor: '#000000',
             borderWidth: '3px',
           },
+          // ДОБАВИТЬ: Настройки WIP-лимитов
+          personalWipLimits: parsed.personalWipLimits || {
+            enabled: false,
+            limits: []
+          }
         };
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('[Jira Helper] Ошибка загрузки настроек:', error);
     }
 
@@ -109,12 +154,15 @@ export class SettingsManager {
         unassignedBackgroundColor: 'rgba(0, 0, 0, 0.1)',
       },
       assigneeOverload: {
-        // ✅ ДОБАВЛЕНО
         enabled: true,
         threshold: 2,
         borderColor: '#000000',
         borderWidth: '3px',
       },
+      personalWipLimits: {
+        enabled: false,
+        limits: []
+      }
     };
   }
 
@@ -122,7 +170,6 @@ export class SettingsManager {
     try {
       localStorage.setItem('jira-helper-settings', JSON.stringify(this.settings));
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('[Jira Helper] Ошибка сохранения настроек:', error);
     }
   }

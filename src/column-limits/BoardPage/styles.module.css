@@ -143,70 +143,6 @@
   background: #0856b9;
 }
 
-.overload-settings {
-  padding: 16px;
-  border-top: 1px solid #eee;
-}
-
-.overload-settings h4 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  color: #333;
-}
-
-.setting-item {
-  margin-bottom: 16px;
-}
-
-.setting-item label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.setting-description {
-  font-size: 12px;
-  color: #666;
-  margin-top: 4px;
-  margin-left: 24px;
-}
-
-/* Предпросмотр */
-.preview {
-  margin-top: 12px;
-}
-
-.preview-card {
-  width: 200px;
-  height: 60px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  position: relative;
-  margin-bottom: 8px;
-}
-
-.overload-preview {
-  border: 3px solid #000 !important;
-  box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
-}
-
-.preview-content {
-  padding: 8px;
-}
-
-.preview-text {
-  font-size: 12px;
-  color: #333;
-}
-
-.preview-label {
-  font-size: 11px;
-  color: #999;
-  text-align: center;
-}
-
 .wip-limits-container {
   padding: 16px;
 }
@@ -267,6 +203,21 @@
   font-size: 12px;
   color: #666;
   margin-top: 4px;
+}
+
+/* Секция выбора цвета WIP */
+.wip-color-section {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f6f8fa;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
+}
+
+.wip-color-section h6 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
 }
 
 .wip-form-actions {
@@ -365,54 +316,94 @@
     right: -10px;
     max-height: 70vh;
   }
+  
+  .wip-columns-section {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
 }
 
 .wip-limits-container {
   padding: 16px;
-  max-height: 400px; /* Ограничиваем высоту */
-  overflow-y: auto; /* Добавляем скролл при необходимости */
+  max-height: 400px; 
+  overflow-y: auto;
 }
 
 .wip-columns-list {
-  max-height: 150px; /* Ограничиваем список колонок */
+  max-height: 150px;
   overflow-y: auto;
   border: 1px solid #e1e4e8;
   border-radius: 6px;
   padding: 8px;
 }
 
-/* Стили для WIP перегрузки */
-:global(.jh-wip-overloaded) {
-  animation: jh-pulse-warning 2s infinite !important;
-  border-width: 4px !important; /* Толще обычного */
+/* Основной класс для WIP перегрузки */
+.jh-wip-overloaded {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* ВСЕ ТРИ ТИПА ПОДСВЕТКИ ОДНОВРЕМЕННО */
+[data-jh-wip-overloaded="true"] {
+  /* 1. Полоска слева - УСИЛЕННАЯ */
+  border-left: 8px solid var(--wip-color, #808080) !important;
+  padding-left: 8px !important;
+  
+  /* 2. Цвет фона - С ПРОЗРАЧНОСТЬЮ */
+  background-color: rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.3) !important;
+  
+  /* 3. Цветная рамка - ДВОЙНАЯ */
+  border: 3px solid var(--wip-color, #808080) !important;
+  border-radius: 4px !important;
   box-shadow: 
-    0 0 0 2px currentColor, /* Цвет исполнителя */
-    0 0 15px currentColor, /* Свечение цветом исполнителя */
-    0 0 0 4px rgba(255, 255, 255, 0.5) !important; /* Белая обводка для контраста */
-  position: relative;
+    0 0 0 1px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.2),
+    0 0 10px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.15) !important;
 }
 
-@keyframes jh-pulse-warning {
-  0% { opacity: 1; }
-  50% { opacity: 0.8; }
-  100% { opacity: 1; }
-}
-
-/* Добавляем значок перегрузки */
-:global(.jh-wip-overloaded::before) {
-  content: '⏱️'; /* Или ⚠️ или 📈 */
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  font-size: 12px;
+/* Значок предупреждения */
+[data-jh-wip-overloaded="true"]::before {
+  content: '⚠️' !important;
+  position: absolute !important;
+  top: 4px !important;
+  right: 4px !important;
+  font-size: 12px !important;
+  background: white !important;
+  border-radius: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--wip-color, #808080) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
   z-index: 1000 !important;
-  background: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid currentColor; /* Цвет исполнителя */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: none !important;
+}
+
+:root {
+  --wip-default-color: #808080; /* Серый по умолчанию */
+  --wip-default-r: 128;
+  --wip-default-g: 128;
+  --wip-default-b: 128;
+}
+
+.jh-wip-overloaded-active {
+  /* Принудительное применение всех стилей */
+  position: relative !important;
+  z-index: 1000 !important;
+  isolation: isolate !important;
+}
+
+[data-jh-wip-overloaded="true"] {
+  /* CSS Custom Properties для цвета */
+  --wip-color: var(--wip-custom-color, #808080) !important;
+  
+  border-left: 10px solid var(--wip-color) !important;
+  padding-left: 10px !important;
+  background-color: rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.4) !important;
+  border: 5px solid var(--wip-color) !important;
+  border-radius: 6px !important;
+  box-shadow: 
+    0 0 0 3px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.3),
+    0 0 15px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.2) !important;
 }

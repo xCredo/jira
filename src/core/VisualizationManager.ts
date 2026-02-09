@@ -105,6 +105,12 @@ export class VisualizationManager {
 
   // Покрасить карточку по исполнителю
   private paintCardByAssignee(card: HTMLElement): void {
+    // ВАЖНО: Если карточка имеет WIP-перегрузку, НЕ применяем обычную подсветку
+    if (card.hasAttribute('data-jh-wip-overloaded') || card.classList.contains('jh-wip-overloaded')) {
+      console.log('[Jira Helper] Карточка имеет WIP-перегрузку, пропускаем обычную подсветку');
+      return;
+    }
+
     // Сначала очищаем предыдущую визуализацию
     this.removeVisualization(card);
 
@@ -248,6 +254,12 @@ export class VisualizationManager {
   }
 
   private removeVisualization(card: HTMLElement): void {
+    // ВАЖНО: Не очищаем карточку если она имеет WIP-перегрузку
+    if (card.hasAttribute('data-jh-wip-overloaded') || card.classList.contains('jh-wip-overloaded')) {
+      console.log('[Jira Helper] Карточка имеет WIP-перегрузку, не очищаем стили');
+      return;
+    }
+
     // Удаляем полоску
     const stripe = card.querySelector('.jira-helper-assignee-stripe');
     if (stripe) stripe.remove();
@@ -267,7 +279,12 @@ export class VisualizationManager {
 
   private removeAllVisualizations(): void {
     const cards = this.getAllCards();
-    cards.forEach(card => this.removeVisualization(card));
+    cards.forEach(card => {
+      // Очищаем только карточки без WIP-перегрузки
+      if (!card.hasAttribute('data-jh-wip-overloaded') && !card.classList.contains('jh-wip-overloaded')) {
+        this.removeVisualization(card);
+      }
+    });
   }
 
   isEnabledStatus(): boolean {

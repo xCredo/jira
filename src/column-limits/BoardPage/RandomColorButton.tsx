@@ -92,6 +92,15 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
         console.log('[Jira Helper] Автоприменение перегрузки исполнителей');
         overloadVisualizer.setEnabled(true);
       }
+
+      if (currentSettings.personalWipLimits?.enabled && currentSettings.personalWipLimits.limits?.length > 0) {
+        console.log('[Jira Helper] Автоприменение WIP-лимитов');
+        setTimeout(() => {
+          if (window.JiraHelper?.WipLimitsManager) {
+            window.JiraHelper.WipLimitsManager.update();
+          }
+        }, 1500);
+      }
     }, 800);
   }, [loadSettings]);
 

@@ -11,7 +11,7 @@ interface WipLimit {
   columnIds: string[];
   columnNames: string[];
   limit: number;
-  color?: string;
+  color: string; // ← Обязательное поле теперь
 }
 
 interface Column {
@@ -26,6 +26,18 @@ interface User {
   avatarUrl?: string;
 }
 
+// Цвета для выбора
+const COLOR_OPTIONS = [
+  { name: 'Серый', value: '#808080' },
+  { name: 'Красный', value: '#FF0000' },
+  { name: 'Оранжевый', value: '#FF7F00' },
+  { name: 'Жёлтый', value: '#FFFF00' },
+  { name: 'Зелёный', value: '#00FF00' },
+  { name: 'Синий', value: '#0000FF' },
+  { name: 'Фиолетовый', value: '#8B00FF' },
+  { name: 'Чёрный', value: '#000000' },
+];
+
 export const PersonalWipLimits: React.FC = () => {
   const [limits, setLimits] = useState<WipLimit[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
@@ -34,6 +46,8 @@ export const PersonalWipLimits: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [limitValue, setLimitValue] = useState<number>(2);
+  const [selectedColor, setSelectedColor] = useState<string>('#808080'); // Серый по умолчанию
+  const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
 
   // Загрузка данных при монтировании
   useEffect(() => {
@@ -54,33 +68,46 @@ export const PersonalWipLimits: React.FC = () => {
 
   const loadColumns = () => {
     try {
-        const columns = columnManager.getColumns();
-        
-        if (columns.length > 0) {
+      const columns = columnManager.getColumns();
+      
+      if (columns.length > 0) {
         setColumns(columns.map(col => ({
-            id: col.id,
-            name: col.name
+          id: col.id,
+          name: col.name
         })));
         console.log('[Jira Helper] Загружено колонок:', columns.length);
-        } else {
+      } else {
         console.log('[Jira Helper] Колонки не найдены, повтор через 1 сек');
         setTimeout(loadColumns, 1000);
-        }
+      }
     } catch (error) {
-        console.error('[Jira Helper] Ошибка загрузки колонок:', error);
+      console.error('[Jira Helper] Ошибка загрузки колонок:', error);
     }
-    };
-
+  };
 
   const loadUsers = () => {
     try {
-      const assigneeManager = (window as any).JiraHelper?.AssigneeManager;
-      if (assigneeManager) {
-        const allUsers = assigneeManager.getAllAssigneesFromCards();
-        setUsers(allUsers);
+      // Добавьте проверку и повторные попытки
+      if (!window.JiraHelper?.AssigneeManager) {
+        console.log('[Jira Helper] AssigneeManager не загружен, повтор через 500ms');
+        setTimeout(loadUsers, 500);
+        return;
       }
+      
+      const assigneeManager = window.JiraHelper.AssigneeManager;
+      const allUsers = assigneeManager.getAllAssigneesFromCards();
+      
+      if (allUsers.length === 0) {
+        console.log('[Jira Helper] Пользователи не найдены, повтор через 500ms');
+        setTimeout(loadUsers, 500);
+        return;
+      }
+      
+      setUsers(allUsers);
+      console.log('[Jira Helper] Загружено пользователей:', allUsers.length);
     } catch (error) {
       console.error('[Jira Helper] Ошибка загрузки пользователей:', error);
+      setTimeout(loadUsers, 1000);
     }
   };
 
@@ -101,9 +128,12 @@ export const PersonalWipLimits: React.FC = () => {
       userName: user.displayName,
       columnIds: selectedColumns,
       columnNames: selectedColumnObjs.map(col => col.name),
-      limit: limitValue
+      limit: limitValue,
+      color: selectedColor // ← Сохраняем выбранный цвет
     };
 
+    console.log('Создаётся лимит с цветом:', selectedColor);
+    
     const updatedLimits = [...limits, newLimit];
     
     // Сохраняем в настройки
@@ -148,6 +178,8 @@ export const PersonalWipLimits: React.FC = () => {
     setSelectedUser('');
     setSelectedColumns([]);
     setLimitValue(2);
+    setSelectedColor('#808080'); // Сбрасываем на серый
+    setShowColorPicker(false);
   };
 
   const toggleColumnSelection = (columnId: string) => {
@@ -179,6 +211,16 @@ export const PersonalWipLimits: React.FC = () => {
                 <div key={limit.id} className={styles['wip-limit-item']}>
                   <div className={styles['wip-limit-info']}>
                     <strong>{limit.userName}</strong> - не более {limit.limit} задач в колонках: {limit.columnNames.join(', ')}
+                    <div style={{ 
+                      display: 'inline-block',
+                      marginLeft: '8px',
+                      width: '12px',
+                      height: '12px',
+                      backgroundColor: limit.color,
+                      border: '1px solid #ccc',
+                      borderRadius: '2px',
+                      verticalAlign: 'middle'
+                    }} title={`Цвет: ${limit.color}`} />
                   </div>
                   <button
                     type="button"
@@ -247,6 +289,85 @@ export const PersonalWipLimits: React.FC = () => {
             <p className={styles['wip-limit-description']}>
               Не более {limitValue} задач в сумме со всех выбранных колонок
             </p>
+          </div>
+
+          {/* БЛОК ВЫБОРА ЦВЕТА */}
+          <div className={styles['wip-color-section']}>
+            <h6>Цвет подсветки при превышении:</h6>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div
+                style={{
+                  width: '30px',
+                  height: '30px',
+                  backgroundColor: selectedColor,
+                  border: '2px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                title="Выбрать цвет"
+              />
+              <button
+                type="button"
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                style={{
+                  padding: '5px 10px',
+                  backgroundColor: '#f6f8fa',
+                  border: '1px solid #d0d7de',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                {showColorPicker ? 'Скрыть палитру' : 'Показать палитру'}
+              </button>
+              <span style={{ fontSize: '12px', color: '#666' }}>
+                {COLOR_OPTIONS.find(c => c.value === selectedColor)?.name || 'Пользовательский'}
+              </span>
+            </div>
+
+            {showColorPicker && (
+              <div style={{
+                padding: '10px',
+                backgroundColor: '#f6f8fa',
+                borderRadius: '6px',
+                marginBottom: '15px',
+                border: '1px solid #e1e4e8'
+              }}>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                  Выберите цвет для WIP-подсветки:
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '6px'
+                }}>
+                  {COLOR_OPTIONS.map(color => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColor(color.value);
+                        setShowColorPicker(false);
+                      }}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: color.value,
+                        border: selectedColor === color.value ? '3px solid #0969da' : '1px solid #ccc',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: '#888', marginTop: '8px' }}>
+                  Цвет будет применяться всеми тремя типами подсветки
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={styles['wip-form-actions']}>
