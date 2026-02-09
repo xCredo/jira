@@ -28,7 +28,7 @@ const COLOR_OPTIONS = [
 let counter = 0;
 export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAllCards }) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'columns' | 'assignees' | 'wip-limits'>('columns');
+  const [settingsTab, setSettingsTab] = useState<'columns' | 'assignees' | 'wip-limits' | 'column-groups'>('columns');
   const [columnColorsEnabled, setColumnColorsEnabled] = useState(false);
   const [isTogglingColumns, setIsTogglingColumns] = useState(false);
   const [assigneeEnabled, setAssigneeEnabled] = useState(false);
@@ -38,7 +38,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
   const [assigneesList, setAssigneesList] = useState<any[]>([]);
   const [showColorPickerFor, setShowColorPickerFor] = useState<string | null>(null);
 
-  // ✅ ДОБАВЛЕНО: Состояние для фичи перегрузки
   const [overloadEnabled, setOverloadEnabled] = useState(true);
 
   // Функция для загрузки настроек
@@ -47,7 +46,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
     setColumnColorsEnabled(currentSettings.columnColors.enabled);
     setAssigneeEnabled(currentSettings.assigneeHighlight.enabled);
     setSelectedVizType(currentSettings.assigneeHighlight.visualizationType);
-    // ✅ ДОБАВЛЕНО: Загружаем состояние перегрузки
     setOverloadEnabled(currentSettings.assigneeOverload.enabled);
   }, []);
 
@@ -367,6 +365,12 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
             >
               ⚠️ Персональные WIP-Limits
             </button>
+            <button
+              onClick={() => setSettingsTab('column-groups')}
+              className={settingsTab === 'column-groups' ? styles['jh-tab-active'] : styles['jh-tab']}
+            >
+              🏷️ Группы колонок
+            </button>
           </div>
 
           <div className={styles['jh-settings-content']}>
@@ -645,6 +649,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
             )}
 
             {settingsTab === 'wip-limits' && <PersonalWipLimits />}
+            {settingsTab === 'column-groups' && <ColumnGroupsWipLimits />}
           </div>
 
           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>

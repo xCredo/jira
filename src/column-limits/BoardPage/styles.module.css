@@ -361,7 +361,7 @@
 }
 
 /* Значок предупреждения */
-[data-jh-wip-overloaded="true"]::before {
+/* [data-jh-wip-overloaded="true"]::before {
   content: '⚠️' !important;
   position: absolute !important;
   top: 4px !important;
@@ -379,7 +379,7 @@
   z-index: 1000 !important;
   pointer-events: none !important;
 }
-
+ */
 :root {
   --wip-default-color: #808080; /* Серый по умолчанию */
   --wip-default-r: 128;

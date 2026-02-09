@@ -1,6 +1,7 @@
 import { settingsManager } from './SettingsManager';
 import { columnManager } from './ColumnManager';
 import { assigneeManager } from './AssigneeManager';
+import { avatarIndicatorManager } from './AvatarIndicatorManager';
 
 export interface WipLimit {
   id: string;
@@ -51,7 +52,14 @@ export class WipLimitsManager {
       if (exceeded) {
         console.log(`⚠️ ${limit.userName} превысил лимит: ${currentCount}/${limit.limit}`);
         
-        // Красим ТОЛЬКО карточки в выбранных колонках
+        // Добавляем индикатор на аватар
+        avatarIndicatorManager.addIndicator(limit.userId, {
+          type: 'wip-overload',
+          color: limit.color || '#FF0000',
+          tooltip: `${limit.userName} превысил WIP-лимит: ${currentCount}/${limit.limit}`
+        });
+
+        // Красим карточки в выбранных колонках
         cardsInLimitedColumns.forEach(card => {
           console.log(`  Окрашиваем карточку в колонке ${columnManager.getCardColumnId(card)}`);
           this.markCardAsOverloaded(card, true, limit.color);
@@ -67,6 +75,9 @@ export class WipLimitsManager {
       } else {
         console.log(`✅ ${limit.userName} в рамках лимита: ${currentCount}/${limit.limit}`);
         
+        // Убираем индикатор с аватара
+        avatarIndicatorManager.removeIndicator(limit.userId, 'wip-overload');
+
         // Снимаем окраску со ВСЕХ карточек пользователя
         allUserCards.forEach(card => {
           this.markCardAsOverloaded(card, false);
@@ -235,30 +246,20 @@ export class WipLimitsManager {
   }
 
   private addWarningIcon(element: HTMLElement, color: string) {
-    // Удаляем старый значок
     const oldIcon = element.querySelector('.jh-wip-warning-icon');
     if (oldIcon) oldIcon.remove();
     
-    // Создаём новый
     const icon = document.createElement('div');
     icon.className = 'jh-wip-warning-icon';
     icon.innerHTML = '⚠️';
     icon.style.cssText = `
       position: absolute !important;
-      top: 5px !important;
-      right: 5px !important;
-      font-size: 14px !important;
-      background: white !important;
-      border-radius: 50% !important;
-      width: 22px !important;
-      height: 22px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      border: 2px solid ${color} !important;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+      top: 8px !important;
+      right: 8px !important;
+      font-size: 16px !important;
       z-index: 10000 !important;
       pointer-events: none !important;
+      opacity: 0.9 !important;
     `;
     
     element.appendChild(icon);

@@ -47,7 +47,7 @@ export class SettingsManager {
 
   private settings: Settings;
 
-  private constructor() {
+  constructor() {
     this.settings = this.loadSettings();
   }
 
@@ -176,3 +176,8 @@ export class SettingsManager {
 }
 
 export const settingsManager = SettingsManager.getInstance();
+
+if (typeof window !== 'undefined') {
+  (window as any).JiraHelper = (window as any).JiraHelper || {};
+  (window as any).JiraHelper.settingsManager = settingsManager;
+}
