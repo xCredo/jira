@@ -2,6 +2,8 @@ import { settingsManager } from './SettingsManager';
 import { columnManager } from './ColumnManager';
 import { assigneeManager } from './AssigneeManager';
 import { avatarIndicatorManager } from './AvatarIndicatorManager';
+import { groupWipLimitsManager } from './GroupWipLimitsManager';
+import { columnGroupVisualizer } from './ColumnGroupVisualizer';
 
 export interface WipLimit {
   id: string;
@@ -368,3 +370,5 @@ export const wipLimitsManager = new WipLimitsManager();
 
 if (!window.JiraHelper) window.JiraHelper = {}
 window.JiraHelper.WipLimitsManager = wipLimitsManager;
+window.JiraHelper.GroupWipLimitsManager = groupWipLimitsManager;
+window.JiraHelper.ColumnGroupVisualizer = columnGroupVisualizer;

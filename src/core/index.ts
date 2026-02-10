@@ -101,6 +101,8 @@ import { overloadVisualizer } from './OverloadVisualizer';
 import { columnManager } from './ColumnManager';
 import { wipLimitsManager } from './WipLimitsManager';
 import { avatarIndicatorManager } from './AvatarIndicatorManager';
+import { columnGroupVisualizer } from './ColumnGroupVisualizer';
+import { groupWipLimitsManager } from './GroupWipLimitsManager';
 
 // ЭКСПОРТЫ
 export { settingsManager } from './SettingsManager';
@@ -113,6 +115,8 @@ export { wipLimitsManager } from './WipLimitsManager';
 export type { Settings, AssigneeHighlightSettings } from './SettingsManager';
 export { avatarIndicatorManager } from './AvatarIndicatorManager';
 export type { AvatarIndicator } from './AvatarIndicatorManager';
+export { groupWipLimitsManager } from './GroupWipLimitsManager';
+export { columnGroupVisualizer } from './ColumnGroupVisualizer';
 
 // Глобальная инициализация расширения
 export function initializeCore(): void {
@@ -123,7 +127,6 @@ export function initializeCore(): void {
 
   // Создаём или дополняем глобальный объект
   window.JiraHelper = window.JiraHelper || {};
-  
   // Добавляем менеджеры если их нет (используем временный settingsManager)
   window.JiraHelper.settingsManager = window.JiraHelper.settingsManager || tempSettingsManager;
   window.JiraHelper.assigneeManager = window.JiraHelper.assigneeManager || assigneeManager;
@@ -134,6 +137,8 @@ export function initializeCore(): void {
   window.JiraHelper.wipLimitsManager = window.JiraHelper.wipLimitsManager || wipLimitsManager;
   window.JiraHelper.AvatarIndicatorManager = window.JiraHelper.AvatarIndicatorManager || avatarIndicatorManager;
   window.JiraHelper.initializeCore = window.JiraHelper.initializeCore || initializeCore;
+  window.JiraHelper.GroupWipLimitsManager = window.JiraHelper.GroupWipLimitsManager || groupWipLimitsManager;
+  window.JiraHelper.ColumnGroupVisualizer = window.JiraHelper.ColumnGroupVisualizer || columnGroupVisualizer;
 
   console.log('[Jira Helper] JiraHelper экспортирован в глобальную область');
 

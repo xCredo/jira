@@ -1,8 +1,8 @@
 // src/core/ColumnGroupsWipLimits.tsx
 import React, { useState, useEffect } from 'react';
-import { settingsManager } from '../SettingsManager';
-import { columnManager } from '../ColumnManager';
-import styles from '../styles.module.css'; // Или другой путь
+import { settingsManager } from './SettingsManager';
+import { columnManager } from './ColumnManager';
+import styles from '../column-limits/BoardPage/styles.module.css';
 
 interface ColumnGroupWipLimit {
   id: string;

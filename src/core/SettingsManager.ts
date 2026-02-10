@@ -26,7 +26,21 @@ export interface WipLimitSettings {
     columnIds: string[];
     columnNames: string[];
     limit: number;
-    color: string; // ← Цвет для WIP-подсветки
+    color: string; 
+  }>;
+}
+
+// Интерфейс для WIP-лимитов на группы колонок
+export interface ColumnGroupWipLimitSettings {
+  enabled: boolean;
+  limits: Array<{
+    id: string;
+    name: string;                    // "В разработке", "На проверке"
+    columnIds: string[];            // ID колонок
+    columnNames: string[];          // Названия колонок
+    limit: number;                  // Лимит задач
+    baseColor: string;              // Базовый цвет фона (#E3F2FD)
+    warningColor?: string;          // Цвет при превышении (по умолчанию красный)
   }>;
 }
 
@@ -39,7 +53,8 @@ export interface Settings {
     borderColor: string; // Цвет рамки (по умолчанию #000000)
     borderWidth: string; // Толщина рамки (по умолчанию 3px)
   };
-  personalWipLimits: WipLimitSettings; // ← ДОБАВИТЬ
+  personalWipLimits: WipLimitSettings;
+  columnGroupWipLimits: ColumnGroupWipLimitSettings;
 }
 
 export class SettingsManager {
@@ -74,6 +89,10 @@ export class SettingsManager {
         ...this.settings.personalWipLimits,
         ...updates.personalWipLimits,
       },
+      columnGroupWipLimits: {
+        ...this.settings.columnGroupWipLimits,
+        ...updates.columnGroupWipLimits,
+      },
     };
 
     this.saveSettings();
@@ -91,7 +110,7 @@ export class SettingsManager {
     this.saveSettings();
   }
 
-  // ДОБАВИТЬ: Метод для обновления цвета WIP-лимита
+  // Метод для обновления цвета WIP-лимита
   setWipLimitColor(limitId: string, color: string): void {
     if (this.settings.personalWipLimits?.limits) {
       const index = this.settings.personalWipLimits.limits.findIndex(l => l.id === limitId);
@@ -107,7 +126,6 @@ export class SettingsManager {
       const saved = localStorage.getItem('jira-helper-settings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        
         // Обеспечиваем обратную совместимость
         return {
           columnColors: parsed.columnColors || { enabled: false },
@@ -130,8 +148,12 @@ export class SettingsManager {
           // ДОБАВИТЬ: Настройки WIP-лимитов
           personalWipLimits: parsed.personalWipLimits || {
             enabled: false,
-            limits: []
-          }
+            limits: [],
+          },
+          columnGroupWipLimits: parsed.columnGroupWipLimits || {
+            enabled: false,
+            limits: [],
+          },
         };
       }
     } catch (error) {
@@ -161,8 +183,12 @@ export class SettingsManager {
       },
       personalWipLimits: {
         enabled: false,
-        limits: []
-      }
+        limits: [],
+      },
+      columnGroupWipLimits: {
+        enabled: false,
+        limits: [],
+      },
     };
   }
 

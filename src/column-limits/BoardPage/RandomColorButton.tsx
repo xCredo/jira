@@ -8,6 +8,7 @@ import { visualizationManager } from '../../core/VisualizationManager';
 import { overloadVisualizer } from '../../core/OverloadVisualizer';
 import { OverloadSettings } from './OverloadSettings';
 import { PersonalWipLimits } from './PersonalWipLimits';
+import { ColumnGroupsWipLimits } from '../../core/ColumnGroupsWipLimits';
 
 interface RandomColorButtonProps {
   onColorAllCards?: () => void;
@@ -662,7 +663,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                     visualizationManager.updateVisualization();
                   }, 100);
                 }
-                // ✅ ДОБАВЛЕНО: Обновляем перегрузку при закрытии
+                // Обновляем перегрузку при закрытии
                 if (overloadEnabled) {
                   setTimeout(() => {
                     overloadVisualizer.update();
