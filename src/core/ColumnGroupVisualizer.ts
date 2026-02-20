@@ -25,15 +25,13 @@ export class ColumnGroupVisualizer {
     
     // Окрасить каждую колонку
     columnElements.forEach((column, index) => {
+      column.setAttribute('data-jh-group', group.id);
       this.colorizeColumn(column, color, exceeded);
       
       // Добавить заголовок с счётчиком только к первой колонке
       if (index === 0) {
         this.addGroupHeader(column, group, currentCount, color);
       }
-      
-      // Пометить что колонка обработана этой группой
-      column.setAttribute('data-jh-group', group.id);
     });
     
     this.processedGroups.add(group.id);
@@ -103,53 +101,130 @@ export class ColumnGroupVisualizer {
     currentCount: number,
     color: string
   ) {
-    // Удаляем старый заголовок
-    const oldHeader = columnElement.querySelector('.jh-group-header');
+    const oldHeader = document.querySelector(`.jh-group-header[data-group-id="${group.id}"]`);
     if (oldHeader) oldHeader.remove();
     
-    // Находим заголовок колонки
-    const columnHeader = columnElement.querySelector(
-      'h2, h3, [data-testid*="column-name"], [aria-label]'
-    );
+    const boardContainer = columnElement.closest('._16jlkb7n._1o9zkb7n._i0dl1wug._wij21bp4');
+    if (!boardContainer) return;
     
-    if (columnHeader) {
-      // Создаём контейнер для заголовка группы
-      const groupHeader = document.createElement('div');
-      groupHeader.className = 'jh-group-header';
-      groupHeader.style.cssText = `
+    // Создаём или получаем контейнер для заголовков
+    let headerContainer = boardContainer.querySelector('.jh-group-header-container');
+    if (!headerContainer) {
+      headerContainer = document.createElement('div');
+      headerContainer.className = 'jh-group-header-container';
+      headerContainer.style.cssText = `
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 55px !important;
         display: flex !important;
         align-items: center !important;
-        gap: 8px !important;
-        margin-bottom: 8px !important;
-        padding: 4px 8px !important;
-        background: ${this.hexToRgba(color, 0.1)} !important;
-        border-radius: 4px !important;
-        font-size: 12px !important;
-        font-weight: bold !important;
+        justify-content: flex-start !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        z-index: 1000 !important;
+        pointer-events: none !important;
       `;
       
-      // Название группы
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = group.name;
-      nameSpan.style.color = color;
-      
-      // Счётчик
-      const counterSpan = document.createElement('span');
-      counterSpan.textContent = `${currentCount}/${group.limit}`;
-      counterSpan.style.cssText = `
-        background: ${color} !important;
-        color: white !important;
-        padding: 2px 6px !important;
-        border-radius: 3px !important;
-        font-size: 11px !important;
-        font-weight: bold !important;
-      `;
-      
-      groupHeader.appendChild(nameSpan);
-      groupHeader.appendChild(counterSpan);
-      
-      // Вставляем перед заголовком колонки
-      columnHeader.parentElement?.insertBefore(groupHeader, columnHeader);
+      boardContainer.style.position = 'relative';
+      boardContainer.style.paddingTop = '55px';
+      boardContainer.insertBefore(headerContainer, boardContainer.firstChild);
+    }
+    
+    // Получаем все колонки доски
+    const allColumns = document.querySelectorAll<HTMLElement>('.__board-test-hook__column, [data-testid*="column"], [data-component-selector*="column"]');
+    if (allColumns.length === 0) return;
+    
+    // Создаём ячейки для всех колонок, если их ещё нет
+    if (headerContainer.children.length === 0) {
+      for (let i = 0; i < allColumns.length; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'jh-group-cell';
+        cell.style.cssText = `
+          flex: 1 1 0 !important;
+          height: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-start !important;
+          padding: 0 8px !important;
+          pointer-events: none !important;
+        `;
+        headerContainer.appendChild(cell);
+      }
+    }
+    
+    // Находим первую колонку группы
+    const allGroupColumns = document.querySelectorAll<HTMLElement>(`[data-jh-group="${group.id}"]`);
+    if (allGroupColumns.length === 0) return;
+    
+    const firstColumn = allGroupColumns[0];
+    let columnIndex = -1;
+    
+    for (let i = 0; i < allColumns.length; i++) {
+      if (allColumns[i] === firstColumn) {
+        columnIndex = i;
+        break;
+      }
+    }
+    
+    if (columnIndex === -1) return;
+    
+    // Создаём заголовок
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'jh-group-header';
+    groupHeader.setAttribute('data-group-id', group.id);
+    groupHeader.style.cssText = `
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 8px !important;
+      width: 100% !important;
+      height: 32px !important;
+      padding: 0 8px !important;
+      background: ${this.hexToRgba(color, 0.15)} !important;
+      border: 1px solid ${color} !important;
+      border-radius: 4px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      box-sizing: border-box !important;
+      pointer-events: auto !important;
+      color: ${color} !important;
+    `;
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = group.name;
+    nameSpan.style.cssText = `
+      color: ${color} !important;
+      max-width: 120px;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      font-size: 12px !important;
+    `;
+    nameSpan.title = group.name;
+    
+    const counterSpan = document.createElement('span');
+    counterSpan.textContent = `${currentCount}/${group.limit}`;
+    counterSpan.style.cssText = `
+      background: ${color} !important;
+      color: white !important;
+      padding: 2px 6px !important;
+      border-radius: 10px !important;
+      font-size: 11px !important;
+      font-weight: bold !important;
+      flex-shrink: 0 !important;
+      line-height: 1 !important;
+    `;
+    
+    groupHeader.appendChild(nameSpan);
+    groupHeader.appendChild(counterSpan);
+    
+    // Вставляем заголовок в нужную ячейку
+    const targetCell = headerContainer.children[columnIndex] as HTMLElement;
+    if (targetCell) {
+      targetCell.innerHTML = '';
+      targetCell.appendChild(groupHeader);
     }
   }
   
@@ -192,6 +267,36 @@ export class ColumnGroupVisualizer {
     }
     return hex;
   }
+
+  private ensureHeaderContainer(boardContainer: HTMLElement): HTMLElement {
+    let headerContainer = boardContainer.querySelector('.jh-group-header-container');
+    if (!headerContainer) {
+      headerContainer = document.createElement('div');
+      headerContainer.className = 'jh-group-header-container';
+      headerContainer.style.cssText = `
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 55px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        z-index: 1000 !important;
+        pointer-events: none !important;
+      `;
+      boardContainer.style.position = 'relative';
+      boardContainer.style.paddingTop = '55px';
+      boardContainer.insertBefore(headerContainer, boardContainer.firstChild);
+    }
+    return headerContainer as HTMLElement;
+  }
+  public getProcessedGroups(): Set<string> {
+    return this.processedGroups;
+  }
+  
 }
 
 export const columnGroupVisualizer = new ColumnGroupVisualizer();

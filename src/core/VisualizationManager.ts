@@ -1,7 +1,6 @@
 // src/core/VisualizationManager.ts
 import { settingsManager } from './SettingsManager';
 import { assigneeManager, Assignee } from './AssigneeManager';
-import { overloadVisualizer } from './OverloadVisualizer';
 
 export class VisualizationManager {
   private static instance: VisualizationManager;
@@ -12,6 +11,9 @@ export class VisualizationManager {
 
   private _paintTimeout: number | null = null;
 
+  private lastUpdateTime = 0;
+  private readonly UPDATE_INTERVAL = 500; // Не чаще раза в 500мс
+
   private constructor() {}
 
   static getInstance(): VisualizationManager {
@@ -21,22 +23,26 @@ export class VisualizationManager {
     return VisualizationManager.instance;
   }
 
-  // ГЛАВНЫЙ МЕТОД: Применить цвета исполнителей (как applyColumnColors)
+  // ГЛАВНЫЙ МЕТОД: Применить цвета исполнителей
   applyAssigneeColors(): void {
     if (!this.isEnabled) return;
+
+    // Защита от слишком частых вызовов
+    const now = Date.now();
+    if (now - this.lastUpdateTime < this.UPDATE_INTERVAL) {
+      return;
+    }
+    this.lastUpdateTime = now;
 
     const doPaint = () => {
       try {
         const cards = this.getAllCards();
 
-        // RETRY МЕХАНИЗМ: если карточек нет → пробуем через 300ms
         if (cards.length === 0) {
           if (this._paintTimeout) clearTimeout(this._paintTimeout);
           this._paintTimeout = setTimeout(doPaint, 300);
           return;
         }
-
-        console.log(`[Jira Helper] Применяем цвета исполнителей к ${cards.length} карточкам`);
 
         // Красим каждую карточку
         cards.forEach(card => {
@@ -47,35 +53,22 @@ export class VisualizationManager {
       }
     };
 
-    // Начинаем с задержкой 100ms (как в columnColors)
     setTimeout(doPaint, 100);
   }
 
-  // Включить визуализацию (просто вызов applyAssigneeColors)
+  // Включить визуализацию
   enable(): void {
     if (this.isEnabled) return;
 
     console.log('[Jira Helper] Включение подсветки исполнителей');
     this.isEnabled = true;
 
-    // Применяем обычную визуализацию
     this.applyAssigneeColors();
-
-    // Включаем визуализацию перегрузки (если включена в настройках)
-    const settings = settingsManager.getSettings();
-    if (settings.assigneeOverload.enabled) {
-      overloadVisualizer.setEnabled(true);
-    }
-
-    // Начинаем наблюдение
     this.startObservation();
 
     setTimeout(() => {
       if (this.isEnabled) {
         this.applyAssigneeColors();
-        if (settings.assigneeOverload.enabled) {
-          overloadVisualizer.update();
-        }
       }
     }, 500);
   }
@@ -87,42 +80,31 @@ export class VisualizationManager {
     console.log('[Jira Helper] Отключение подсветки исполнителей');
     this.isEnabled = false;
 
-    // Очищаем таймаут
     if (this._paintTimeout) {
       clearTimeout(this._paintTimeout);
       this._paintTimeout = null;
     }
 
-    // Удаляем обычную визуализацию
     this.removeAllVisualizations();
-
-    // Отключаем визуализацию перегрузки
-    overloadVisualizer.setEnabled(false);
-
-    // Останавливаем наблюдение
     this.stopObservation();
   }
 
   // Покрасить карточку по исполнителю
   private paintCardByAssignee(card: HTMLElement): void {
-    // ВАЖНО: Если карточка имеет WIP-перегрузку, НЕ применяем обычную подсветку
+    // Если карточка имеет WIP-перегрузку — НЕ применяем обычную подсветку
     if (card.hasAttribute('data-jh-wip-overloaded') || card.classList.contains('jh-wip-overloaded')) {
-      console.log('[Jira Helper] Карточка имеет WIP-перегрузку, пропускаем обычную подсветку');
       return;
     }
 
     // Сначала очищаем предыдущую визуализацию
     this.removeVisualization(card);
 
-    // Получаем исполнителя
     const assignee = assigneeManager.getAssigneeForCard(card);
     if (!assignee) return;
 
-    // Получаем настройки
     const settings = settingsManager.getSettings();
     const vizType = settings.assigneeHighlight.visualizationType;
 
-    // Применяем визуализацию
     switch (vizType) {
       case 'stripe':
         this.applyStripe(card, assignee);
@@ -138,13 +120,7 @@ export class VisualizationManager {
 
   updateAllVisualizations(): void {
     if (!this.isEnabled) return;
-
     this.applyAssigneeColors();
-
-    const settings = settingsManager.getSettings();
-    if (settings.assigneeOverload.enabled) {
-      overloadVisualizer.update();
-    }
   }
 
   // Полоска слева
@@ -159,7 +135,7 @@ export class VisualizationManager {
       top: '0',
       width: '6px',
       height: '100%',
-      backgroundColor: assignee.color, // ← ЦВЕТ РАМКИ/ПОЛОСКИ (полный)
+      backgroundColor: assignee.color,
       zIndex: '100',
       pointerEvents: 'none',
     });
@@ -169,42 +145,36 @@ export class VisualizationManager {
 
   private applyBackground(card: HTMLElement, assignee: Assignee): void {
     const innerCard = this.getInnerCard(card);
-
-    // 1. Берем основной цвет (из assignee.color)
-    const mainColor = assignee.color;
-
-    // 2. Добавляем прозрачность 20%
-    const backgroundColor = this.addAlpha(mainColor, 0.4);
-
-    // 3. Применяем
+    const backgroundColor = this.addAlpha(assignee.color, 0.4);
     innerCard.style.backgroundColor = backgroundColor;
     innerCard.dataset.assigneeHighlight = 'true';
   }
 
   private applyBorder(card: HTMLElement, assignee: Assignee): void {
     const innerCard = this.getInnerCard(card);
-
-    // Используем color (полный цвет)
     innerCard.style.border = `2px solid ${assignee.color}`;
     innerCard.style.borderRadius = '4px';
     innerCard.dataset.assigneeHighlight = 'true';
   }
 
-  // Начать наблюдение за DOM (простой MutationObserver)
+  // Начать наблюдение за DOM
   private startObservation(): void {
+    if (this.observer) return;
+
     this.observer = new MutationObserver(() => {
       if (!this.isEnabled) return;
 
       if (this._paintTimeout) clearTimeout(this._paintTimeout);
       this._paintTimeout = setTimeout(() => {
-        this.updateAllVisualizations(); // Используем новый метод
-      }, 100);
+        this.updateAllVisualizations();
+      }, 300); // Увеличен debounce
     });
 
     const board = document.querySelector('[data-testid="software-board.board"]') || document.body;
     this.observer.observe(board, {
       childList: true,
       subtree: true,
+      attributes: false, // Не следим за атрибутами — меньше спама
     });
   }
 
@@ -239,7 +209,6 @@ export class VisualizationManager {
 
   private addAlpha(color: string, alpha: number): string {
     if (color.startsWith('rgba')) {
-      // Если уже rgba, меняем alpha
       return color.replace(/[\d.]+\)$/g, `${alpha})`);
     }
 
@@ -254,20 +223,17 @@ export class VisualizationManager {
   }
 
   private removeVisualization(card: HTMLElement): void {
-    // ВАЖНО: Не очищаем карточку если она имеет WIP-перегрузку
+    // Не очищаем карточки с WIP-перегрузкой
     if (card.hasAttribute('data-jh-wip-overloaded') || card.classList.contains('jh-wip-overloaded')) {
-      console.log('[Jira Helper] Карточка имеет WIP-перегрузку, не очищаем стили');
       return;
     }
 
-    // Удаляем полоску
     const stripe = card.querySelector('.jira-helper-assignee-stripe');
     if (stripe) stripe.remove();
 
-    // Восстанавливаем фон/рамку
     const innerCard = this.getInnerCard(card);
+    if (!innerCard) return;
 
-    // Восстанавливаем только если это НЕ цвет колонки
     if (!card.style.backgroundColor.includes('rgba(')) {
       innerCard.style.backgroundColor = '';
       innerCard.style.border = '';
@@ -280,7 +246,6 @@ export class VisualizationManager {
   private removeAllVisualizations(): void {
     const cards = this.getAllCards();
     cards.forEach(card => {
-      // Очищаем только карточки без WIP-перегрузки
       if (!card.hasAttribute('data-jh-wip-overloaded') && !card.classList.contains('jh-wip-overloaded')) {
         this.removeVisualization(card);
       }
@@ -293,7 +258,6 @@ export class VisualizationManager {
 
   updateVisualization(): void {
     if (!this.isEnabled) return;
-    console.log('[Jira Helper] Обновление визуализации');
     this.applyAssigneeColors();
   }
 }

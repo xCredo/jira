@@ -31,6 +31,18 @@ export class GroupWipLimitsManager {
 
   update() {
     this.loadSettings();
+    
+    // Очищаем визуализацию удалённых групп
+    const visualizer = window.JiraHelper?.ColumnGroupVisualizer;
+    if (visualizer && visualizer.processedGroups) {
+      const activeGroupIds = new Set(this.limits.map(g => g.id));
+      visualizer.processedGroups.forEach((groupId: string) => {
+        if (!activeGroupIds.has(groupId)) {
+          visualizer.removeGroupVisualization(groupId);
+        }
+      });
+    }
+    
     if (!this.enabled || this.limits.length === 0) {
       this.clearGroupIndicators();
       return;
@@ -50,29 +62,24 @@ export class GroupWipLimitsManager {
       if (exceeded) {
         console.log(`⚠️ Группа "${group.name}" превысила лимит: ${currentCount}/${group.limit}`);
         
-        // Найти всех пользователей с карточками в этой группе
         const affectedUsers = this.findUsersInGroupCards(cardsInGroup);
         
-        // Добавить индикаторы СЛЕВА от аватаров
         affectedUsers.forEach(userId => {
           avatarIndicatorManager.addIndicator(userId, {
             type: 'group-wip-overload',
             color: group.warningColor || '#FF0000',
             tooltip: `Группа "${group.name}" превысила лимит: ${currentCount}/${group.limit}`,
-            position: 'left' // ← НОВЫЙ ПАРАМЕТР
+            position: 'left'
           });
         });
 
-        // Применить визуализацию группы (фон колонок)
         this.applyGroupVisualization(group, exceeded, currentCount);
         
       } else {
         console.log(`✅ Группа "${group.name}" в рамках лимита: ${currentCount}/${group.limit}`);
         
-        // Убираем индикаторы этого типа
         avatarIndicatorManager.removeIndicatorsByType('group-wip-overload');
         
-        // Возвращаем нормальную визуализацию
         this.applyGroupVisualization(group, false, currentCount);
       }
     });

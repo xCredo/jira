@@ -104,9 +104,8 @@ export class WipLimitsManager {
         const cardAssignee = assigneeManager.getAssigneeForCard(card);
         if (cardAssignee?.id === limit.userId) {
           userCards.push(card);
-          
-          // Проверяем колонку
           const columnId = columnManager.getCardColumnId(card);
+          console.log(`[DEBUG] Карточка ${card.id} в колонке ${columnId}`);
           if (columnId && limit.columnIds.includes(columnId)) {
             cardsInLimitedColumnsCount++;
             cardsInLimitedColumns.push(card);
@@ -121,7 +120,7 @@ export class WipLimitsManager {
       console.log(`  - exceeded = ${cardsInLimitedColumnsCount} > ${limit.limit} = ${cardsInLimitedColumnsCount > limit.limit}`);
 
       return {
-        exceeded: cardsInLimitedColumnsCount > limit.limit,
+        exceeded: cardsInLimitedColumnsCount >= limit.limit,
         currentCount: cardsInLimitedColumnsCount,
         cardsInLimitedColumns: cardsInLimitedColumns,
         allUserCards: userCards
@@ -183,6 +182,7 @@ export class WipLimitsManager {
   } */
 
   private markCardAsOverloaded(card: HTMLElement, overloaded: boolean, color?: string) {
+    console.log(`[DEBUG] markCardAsOverloaded: overloaded=${overloaded}, card=`, card);
     if (overloaded && color) {
       card.setAttribute('data-jh-wip-overloaded', 'true');
       card.setAttribute('data-jh-wip-color', color);
@@ -197,6 +197,7 @@ export class WipLimitsManager {
       
       this.applyWipHighlight(card, color);
     } else {
+      console.log(`[DEBUG] Снимаем маску с карточки`, card);
       card.removeAttribute('data-jh-wip-overloaded');
       card.removeAttribute('data-jh-wip-color');
       card.classList.remove('jh-wip-overloaded', 'jh-wip-overloaded-active');

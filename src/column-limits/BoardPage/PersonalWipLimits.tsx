@@ -129,7 +129,7 @@ export const PersonalWipLimits: React.FC = () => {
       columnIds: selectedColumns,
       columnNames: selectedColumnObjs.map(col => col.name),
       limit: limitValue,
-      color: selectedColor // ← Сохраняем выбранный цвет
+      color: selectedColor, // ← Сохраняем выбранный цвет
     };
 
     console.log('Создаётся лимит с цветом:', selectedColor);
@@ -141,7 +141,7 @@ export const PersonalWipLimits: React.FC = () => {
       personalWipLimits: {
         enabled: true,
         limits: updatedLimits,
-      }
+      },
     });
 
     setLimits(updatedLimits);
@@ -158,7 +158,7 @@ export const PersonalWipLimits: React.FC = () => {
     settingsManager.updateSettings({
       personalWipLimits: {
         enabled: updatedLimits.length > 0,
-        limits: updatedLimits
+        limits: updatedLimits,
       }
     });
 
@@ -183,11 +183,14 @@ export const PersonalWipLimits: React.FC = () => {
   };
 
   const toggleColumnSelection = (columnId: string) => {
-    setSelectedColumns(prev => 
-      prev.includes(columnId)
+    console.log('Toggle column:', columnId, 'Current selected:', selectedColumns);
+    setSelectedColumns(prev => {
+      const newSelection = prev.includes(columnId)
         ? prev.filter(id => id !== columnId)
-        : [...prev, columnId]
-    );
+        : [...prev, columnId];
+      console.log('New selection:', newSelection);
+      return newSelection;
+    });
   };
 
   return (
@@ -261,18 +264,99 @@ export const PersonalWipLimits: React.FC = () => {
 
             <div className={styles['wip-column']}>
               <h6>Пользователи:</h6>
-              <select
-                value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
-                className={styles['wip-user-select']}
-              >
-                <option value="">Выберите пользователя</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.displayName} ({user.name})
-                  </option>
-                ))}
-              </select>
+              <div className={styles['wip-user-select-custom']}>
+                <h6>Пользователи:</h6>
+                <div
+                  style={{
+                    border: '1px solid #e1e4e8',
+                    borderRadius: '6px',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    padding: '4px',
+                  }}
+                >
+                  <div
+                    onClick={() => setSelectedUser('')}
+                    style={{
+                      padding: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: selectedUser === '' ? '#e6f7ff' : 'transparent',
+                      borderRadius: '4px',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px' }}>❌ Не выбрано</span>
+                  </div>
+                  
+                  {users.map(user => (
+                    <div
+                      key={user.id}
+                      onClick={() => setSelectedUser(user.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedUser === user.id ? '#e6f7ff' : 'transparent',
+                        borderRadius: '4px',
+                        marginBottom: '2px',
+                      }}
+                    >
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.displayName}
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '1px solid #ccc',
+                          }}
+                        />
+                      ) : user.id === 'unassigned' ? (
+                        <div
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            backgroundColor: '#f0f0f0',
+                            border: '1px solid #ccc',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                          }}
+                        >
+                          👤
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            backgroundColor: '#808080',
+                            border: '1px solid #ccc',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            color: '#fff',
+                          }}
+                        >
+                          {user.displayName?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <span style={{ fontSize: '14px' }}>
+                        {user.displayName} ({user.name})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

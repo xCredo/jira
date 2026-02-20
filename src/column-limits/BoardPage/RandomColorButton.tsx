@@ -5,8 +5,6 @@ import { applyColumnColors, removeColumnColors } from '../columnColors';
 import { settingsManager } from '../../core/SettingsManager';
 import styles from './styles.module.css';
 import { visualizationManager } from '../../core/VisualizationManager';
-import { overloadVisualizer } from '../../core/OverloadVisualizer';
-import { OverloadSettings } from './OverloadSettings';
 import { PersonalWipLimits } from './PersonalWipLimits';
 import { ColumnGroupsWipLimits } from '../../core/ColumnGroupsWipLimits';
 
@@ -39,15 +37,12 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
   const [assigneesList, setAssigneesList] = useState<any[]>([]);
   const [showColorPickerFor, setShowColorPickerFor] = useState<string | null>(null);
 
-  const [overloadEnabled, setOverloadEnabled] = useState(true);
-
   // Функция для загрузки настроек
   const loadSettings = useCallback(() => {
     const currentSettings = settingsManager.getSettings();
     setColumnColorsEnabled(currentSettings.columnColors.enabled);
     setAssigneeEnabled(currentSettings.assigneeHighlight.enabled);
     setSelectedVizType(currentSettings.assigneeHighlight.visualizationType);
-    setOverloadEnabled(currentSettings.assigneeOverload.enabled);
   }, []);
 
   // Функция для загрузки списка исполнителей
@@ -86,12 +81,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
         visualizationManager.enable();
       }
 
-      // ✅ ДОБАВЛЕНО: Автоприменение перегрузки
-      if (currentSettings.assigneeOverload.enabled) {
-        console.log('[Jira Helper] Автоприменение перегрузки исполнителей');
-        overloadVisualizer.setEnabled(true);
-      }
-
       if (currentSettings.personalWipLimits?.enabled && currentSettings.personalWipLimits.limits?.length > 0) {
         console.log('[Jira Helper] Автоприменение WIP-лимитов');
         setTimeout(() => {
@@ -121,11 +110,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
 
     if (assigneeEnabled) {
       setTimeout(() => visualizationManager.updateVisualization(), 300);
-    }
-
-    // ✅ ДОБАВЛЕНО: Переприменяем перегрузку если включена
-    if (overloadEnabled) {
-      setTimeout(() => overloadVisualizer.update(), 300);
     }
   };
 
@@ -168,25 +152,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
       visualizationManager.enable();
     } else {
       visualizationManager.disable();
-    }
-  };
-
-  // ✅ ДОБАВЛЕНО: Переключение фичи перегрузки
-  const handleOverloadToggle = (enabled: boolean) => {
-    console.log(`[Jira Helper] Переключаем перегрузку исполнителей: ${enabled}`);
-
-    setOverloadEnabled(enabled);
-    settingsManager.updateSettings({
-      assigneeOverload: {
-        ...settingsManager.getSettings().assigneeOverload,
-        enabled,
-      },
-    });
-
-    if (enabled) {
-      overloadVisualizer.setEnabled(true);
-    } else {
-      overloadVisualizer.setEnabled(false);
     }
   };
 
@@ -661,12 +626,6 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
                 if (assigneeEnabled) {
                   setTimeout(() => {
                     visualizationManager.updateVisualization();
-                  }, 100);
-                }
-                // Обновляем перегрузку при закрытии
-                if (overloadEnabled) {
-                  setTimeout(() => {
-                    overloadVisualizer.update();
                   }, 100);
                 }
               }}

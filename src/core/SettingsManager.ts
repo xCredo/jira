@@ -145,7 +145,7 @@ export class SettingsManager {
             borderColor: '#000000',
             borderWidth: '3px',
           },
-          // ДОБАВИТЬ: Настройки WIP-лимитов
+          // Настройки WIP-лимитов
           personalWipLimits: parsed.personalWipLimits || {
             enabled: false,
             limits: [],
