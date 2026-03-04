@@ -48,6 +48,7 @@ export const PersonalWipLimits: React.FC = () => {
   const [limitValue, setLimitValue] = useState<number>(2);
   const [selectedColor, setSelectedColor] = useState<string>('#808080'); // Серый по умолчанию
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
+  const [editingLimit, setEditingLimit] = useState<WipLimit | null>(null);
 
   // Загрузка данных при монтировании
   useEffect(() => {
@@ -152,6 +153,37 @@ export const PersonalWipLimits: React.FC = () => {
     updateVisualization();
   };
 
+  const handleEditLimit = () => {
+    if (!selectedUser || selectedColumns.length === 0) return;
+    
+    const updatedLimits = limits.map(limit => 
+      limit.id === editingLimit?.id
+        ? {
+            ...limit,
+            userId: selectedUser,
+            userName: users.find(u => u.id === selectedUser)?.displayName || limit.userName,
+            columnIds: selectedColumns,
+            columnNames: columns.filter(col => selectedColumns.includes(col.id)).map(col => col.name),
+            limit: limitValue,
+            color: selectedColor
+          }
+        : limit
+    );
+    
+    settingsManager.updateSettings({
+      personalWipLimits: {
+        enabled: true,
+        limits: updatedLimits
+      }
+    });
+    
+    setLimits(updatedLimits);
+    setShowAddForm(false);
+    setEditingLimit(null);
+    resetForm();
+    updateVisualization();
+  };
+
   const handleRemoveLimit = (limitId: string) => {
     const updatedLimits = limits.filter(limit => limit.id !== limitId);
     
@@ -178,8 +210,9 @@ export const PersonalWipLimits: React.FC = () => {
     setSelectedUser('');
     setSelectedColumns([]);
     setLimitValue(2);
-    setSelectedColor('#808080'); // Сбрасываем на серый
+    setSelectedColor('#808080');
     setShowColorPicker(false);
+    setEditingLimit(null)
   };
 
   const toggleColumnSelection = (columnId: string) => {
@@ -227,6 +260,21 @@ export const PersonalWipLimits: React.FC = () => {
                   </div>
                   <button
                     type="button"
+                    onClick={() => {
+                      setEditingLimit(limit);
+                      setSelectedUser(limit.userId);
+                      setSelectedColumns(limit.columnIds);
+                      setLimitValue(limit.limit);
+                      setSelectedColor(limit.color);
+                      setShowAddForm(true);
+                    }}
+                    className={styles['jh-edit-btn']}
+                    style={{ marginRight: '4px' }}
+                  >
+                    ✏️ Редактировать
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleRemoveLimit(limit.id)}
                     className={styles['jh-remove-btn']}
                   >
@@ -243,8 +291,7 @@ export const PersonalWipLimits: React.FC = () => {
         </>
       ) : (
         <div className={styles['wip-add-form']}>
-          <h5>Добавить новый лимит</h5>
-          
+          <h5>{editingLimit ? 'Редактировать лимит' : 'Добавить новый лимит'}</h5>
           <div className={styles['wip-columns-section']}>
             <div className={styles['wip-column']}>
               <h6>Колонки:</h6>
@@ -468,10 +515,10 @@ export const PersonalWipLimits: React.FC = () => {
           <div className={styles['wip-form-actions']}>
             <button
               type="button"
-              onClick={handleAddLimit}
+              onClick={editingLimit ? handleEditLimit : handleAddLimit}
               className={styles['jh-save-btn']}
             >
-              💾 Сохранить
+              {editingLimit ? '💾 Обновить' : '💾 Сохранить'}
             </button>
             <button
               type="button"

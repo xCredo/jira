@@ -62,7 +62,7 @@ export class GroupWipLimitsManager {
       if (exceeded) {
         console.log(`⚠️ Группа "${group.name}" превысила лимит: ${currentCount}/${group.limit}`);
         
-        const affectedUsers = this.findUsersInGroupCards(cardsInGroup);
+/*         const affectedUsers = this.findUsersInGroupCards(cardsInGroup);
         
         affectedUsers.forEach(userId => {
           avatarIndicatorManager.addIndicator(userId, {
@@ -71,7 +71,7 @@ export class GroupWipLimitsManager {
             tooltip: `Группа "${group.name}" превысила лимит: ${currentCount}/${group.limit}`,
             position: 'left'
           });
-        });
+        }); */
 
         this.applyGroupVisualization(group, exceeded, currentCount);
         
@@ -85,8 +85,8 @@ export class GroupWipLimitsManager {
     });
   }
 
-  private checkGroupLimit(group: ColumnGroupWipLimit): { 
-    exceeded: boolean; 
+  private checkGroupLimit(group: ColumnGroupWipLimit): {
+    exceeded: boolean;
     currentCount: number;
     cardsInGroup: HTMLElement[];
   } {
@@ -94,12 +94,25 @@ export class GroupWipLimitsManager {
       const cards = this.getAllCards();
       const cardsInGroup: HTMLElement[] = [];
       
+      console.log(`[DEBUG] Группа "${group.name}" ищет колонки:`, group.columnIds);
+      
       cards.forEach(card => {
         const columnId = columnManager.getCardColumnId(card);
-        if (columnId && group.columnIds.includes(columnId)) {
-          cardsInGroup.push(card);
+        
+        // Добавляем отладку для каждой карточки
+        if (columnId) {
+          const matches = group.columnIds.includes(columnId);
+          console.log(`[DEBUG] Карточка в колонке ${columnId}, совпадает с группой: ${matches}`);
+          
+          if (matches) {
+            cardsInGroup.push(card);
+          }
+        } else {
+          console.log(`[DEBUG] Карточка без columnId:`, card);
         }
       });
+
+      console.log(`[DEBUG] Группа "${group.name}" нашла ${cardsInGroup.length} карточек из ${cards.length}`);
 
       return {
         exceeded: cardsInGroup.length > group.limit,
@@ -109,8 +122,8 @@ export class GroupWipLimitsManager {
 
     } catch (error) {
       console.error('[GroupWipLimitsManager] Ошибка проверки:', error);
-      return { 
-        exceeded: false, 
+      return {
+        exceeded: false,
         currentCount: 0,
         cardsInGroup: []
       };
@@ -131,8 +144,8 @@ export class GroupWipLimitsManager {
   }
 
   private applyGroupVisualization(
-    group: ColumnGroupWipLimit, 
-    exceeded: boolean, 
+    group: ColumnGroupWipLimit,
+    exceeded: boolean,
     currentCount: number
     ) {
     console.log(`[DEBUG] Визуализация группы "${group.name}"`);

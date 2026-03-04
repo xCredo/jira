@@ -240,7 +240,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
       </button>
 
       {/* Кнопка "Колонки" */}
-      <button
+     {/*  <button
         onClick={handleToggleColumnColors}
         disabled={isTogglingColumns}
         className="css-m2h7i3"
@@ -275,7 +275,7 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
         }}
       >
         <span>{isTogglingColumns ? '⏳' : columnColorsEnabled ? '📊 Колонки (вкл)' : '📊 Колонки'}</span>
-      </button>
+      </button> */}
 
       {/* Кнопка "Настройки" */}
       <button
@@ -313,12 +313,12 @@ export const RandomColorButton: React.FC<RandomColorButtonProps> = ({ onColorAll
           </div>
 
           <div className={styles['jh-settings-tabs']}>
-            <button
+            {/* <button
               onClick={() => setSettingsTab('columns')}
               className={settingsTab === 'columns' ? styles['jh-tab-active'] : styles['jh-tab']}
             >
               📊 Колонки
-            </button>
+            </button> */}
             <button
               onClick={() => setSettingsTab('assignees')}
               className={settingsTab === 'assignees' ? styles['jh-tab-active'] : styles['jh-tab']}

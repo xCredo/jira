@@ -120,7 +120,7 @@ export class WipLimitsManager {
       console.log(`  - exceeded = ${cardsInLimitedColumnsCount} > ${limit.limit} = ${cardsInLimitedColumnsCount > limit.limit}`);
 
       return {
-        exceeded: cardsInLimitedColumnsCount >= limit.limit,
+        exceeded: cardsInLimitedColumnsCount > limit.limit,
         currentCount: cardsInLimitedColumnsCount,
         cardsInLimitedColumns: cardsInLimitedColumns,
         allUserCards: userCards

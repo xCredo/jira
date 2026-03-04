@@ -42,16 +42,64 @@ export const ColumnGroupsWipLimits: React.FC = () => {
   const [warningColor, setWarningColor] = useState<string>('#FF0000');
   const [showBaseColorPicker, setShowBaseColorPicker] = useState<boolean>(false);
   const [showWarningColorPicker, setShowWarningColorPicker] = useState<boolean>(false);
+  const [editingGroup, setEditingGroup] = useState<ColumnGroupWipLimit | null>(null);
 
   // Загрузка данных при монтировании
   useEffect(() => {
     loadData();
+    // Добавить миграцию после загрузки колонок
+    setTimeout(() => {
+      migrateGroupColumns();
+      updateVisualization();
+    }, 1000);
   }, []);
 
   const loadData = () => {
     const settings = settingsManager.getSettings();
     setLimits(settings.columnGroupWipLimits?.limits || []);
     loadColumns();
+  };
+
+  const migrateGroupColumns = () => {
+    const settings = settingsManager.getSettings();
+    const groups = settings.columnGroupWipLimits?.limits || [];
+    
+    if (groups.length === 0) return;
+    
+    // Получаем актуальные колонки
+    const currentColumns = columnManager.getColumns();
+    const columnMap = new Map(currentColumns.map(col => [col.name, col.id]));
+    
+    let needsUpdate = false;
+    const updatedGroups = groups.map(group => {
+      // Пробуем найти новые ID по названиям колонок
+      const newColumnIds = group.columnNames
+        .map(name => {
+          const col = currentColumns.find(c => c.name === name);
+          return col?.id;
+        })
+        .filter(Boolean) as string[];
+      
+      if (newColumnIds.length === group.columnIds.length) {
+        needsUpdate = true;
+        return {
+          ...group,
+          columnIds: newColumnIds
+        };
+      }
+      return group;
+    });
+    
+    if (needsUpdate) {
+      console.log('[ColumnGroups] Обновляем ID колонок в группах');
+      settingsManager.updateSettings({
+        columnGroupWipLimits: {
+          enabled: true,
+          limits: updatedGroups
+        }
+      });
+      setLimits(updatedGroups);
+    }
   };
 
   const loadColumns = () => {
@@ -91,12 +139,45 @@ export const ColumnGroupsWipLimits: React.FC = () => {
     settingsManager.updateSettings({
       columnGroupWipLimits: {
         enabled: true,
-        limits: updatedLimits,
+        limits: updatedLimits
       }
     });
 
     setLimits(updatedLimits);
     setShowAddForm(false);
+    resetForm();
+    updateVisualization();
+  };
+
+  const handleEditGroup = () => {
+    if (!editingGroup) return;
+    
+    const selectedColumnObjs = columns.filter(col => selectedColumns.includes(col.id));
+    
+    const updatedLimits = limits.map(group =>
+      group.id === editingGroup.id
+        ? {
+            ...group,
+            name: groupName,
+            columnIds: selectedColumns,
+            columnNames: selectedColumnObjs.map(col => col.name),
+            limit: limitValue,
+            baseColor: baseColor,
+            warningColor: warningColor
+          }
+        : group
+    );
+    
+    settingsManager.updateSettings({
+      columnGroupWipLimits: {
+        enabled: true,
+        limits: updatedLimits
+      }
+    });
+
+    setLimits(updatedLimits);
+    setShowAddForm(false);
+    setEditingGroup(null);
     resetForm();
     updateVisualization();
   };
@@ -129,6 +210,7 @@ export const ColumnGroupsWipLimits: React.FC = () => {
     setWarningColor('#FF0000');
     setShowBaseColorPicker(false);
     setShowWarningColorPicker(false);
+    setEditingGroup(null);
   };
 
   const toggleColumnSelection = (columnId: string) => {
@@ -147,7 +229,10 @@ export const ColumnGroupsWipLimits: React.FC = () => {
         <>
           <button
             type="button"
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              resetForm();
+              setShowAddForm(true);
+            }}
             className={styles['jh-add-wip-btn']}
           >
             ➕ Добавить группу колонок
@@ -182,13 +267,31 @@ export const ColumnGroupsWipLimits: React.FC = () => {
                       verticalAlign: 'middle'
                     }} title={`Цвет при превышении: ${group.warningColor || '#FF0000'}`} />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveGroup(group.id)}
-                    className={styles['jh-remove-btn']}
-                  >
-                    ❌ Удалить
-                  </button>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingGroup(group);
+                        setGroupName(group.name);
+                        setSelectedColumns(group.columnIds);
+                        setLimitValue(group.limit);
+                        setBaseColor(group.baseColor);
+                        setWarningColor(group.warningColor || '#FF0000');
+                        setShowAddForm(true);
+                      }}
+                      className={styles['jh-edit-btn']}
+                      style={{ marginRight: '4px' }}
+                    >
+                      ✏️ Редактировать
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGroup(group.id)}
+                      className={styles['jh-remove-btn']}
+                    >
+                      ❌ Удалить
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -200,7 +303,7 @@ export const ColumnGroupsWipLimits: React.FC = () => {
         </>
       ) : (
         <div className={styles['wip-add-form']}>
-          <h5>Создать новую группу колонок</h5>
+          <h5>{editingGroup ? 'Редактировать группу' : 'Создать новую группу колонок'}</h5>
           
           <div className={styles['wip-input-section']}>
             <h6>Название группы:</h6>
@@ -396,10 +499,10 @@ export const ColumnGroupsWipLimits: React.FC = () => {
           <div className={styles['wip-form-actions']}>
             <button
               type="button"
-              onClick={handleAddGroup}
+              onClick={editingGroup ? handleEditGroup : handleAddGroup}
               className={styles['jh-save-btn']}
             >
-              💾 Сохранить группу
+              {editingGroup ? '💾 Обновить группу' : '💾 Сохранить группу'}
             </button>
             <button
               type="button"

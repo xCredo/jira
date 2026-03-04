@@ -1,3 +1,5 @@
+// src/core/AvatarIndicatorManager.ts
+
 export interface AvatarIndicator {
   userId: string;
   type: 'wip-overload' | 'group-wip-overload' | 'column-limit' | 'custom';
@@ -105,14 +107,34 @@ export class AvatarIndicatorManager {
     
     if (!userName) return avatars;
     
-    const allAvatars = document.querySelectorAll('[data-testid*="ak-avatar"]');
+    // Ищем аватары в разных местах интерфейса
+    const selectors = [
+      '[data-testid*="ak-avatar"]',
+      '[data-testid*="avatar"]',
+      './/img', // для XPath
+    ];
+    
+    // Поиск по data-testid
+    const allAvatars = document.querySelectorAll('[data-testid*="ak-avatar"], [data-testid*="avatar"]');
     allAvatars.forEach(avatar => {
+      // Проверяем по label
       const label = avatar.querySelector('[data-testid*="ak-avatar--label"]');
       if (label && label.textContent === userName) {
         avatars.push(avatar as HTMLElement);
+        return;
       }
+      
+      // Проверяем по alt тексту у img
       const img = avatar.querySelector('img');
       if (img && img.alt && img.alt.includes(userName)) {
+        if (!avatars.includes(avatar as HTMLElement)) {
+          avatars.push(avatar as HTMLElement);
+        }
+        return;
+      }
+      
+      // Проверяем по тексту внутри
+      if (avatar.textContent && avatar.textContent.includes(userName)) {
         if (!avatars.includes(avatar as HTMLElement)) {
           avatars.push(avatar as HTMLElement);
         }
@@ -122,32 +144,40 @@ export class AvatarIndicatorManager {
     return avatars;
   }
 
-  private applyIndicatorToAvatar(avatar: HTMLElement, indicator: AvatarIndicator) {
-    const avatarInner = avatar.querySelector('[data-testid*="ak-avatar--inner"]');
-    if (!avatarInner) return;
+  private findAvatarContainer(avatar: HTMLElement): HTMLElement | null {
+    // Ищем подходящий контейнер для индикатора
+    const container = avatar.closest('[data-testid*="filters.ui.filters.assignee.stateless.avatar"]') || 
+                     avatar.closest('._2rko1rr0') ||
+                     avatar.closest('[data-testid*="ak-avatar"]') ||
+                     avatar;
     
-    const container = document.createElement('div');
-    container.className = 'jh-avatar-indicator-container';
-    
-    let top = '-4px';
-    let left = 'auto';
-    let right = 'auto';
-    
-    switch (indicator.position) {
-      case 'left':
-        top = '-4px';
-        left = '-4px';
-        right = 'auto';
-        break;
-      case 'right':
-      default:
-        top = '-4px';
-        left = 'auto';
-        right = '-4px';
-        break;
+    // Убеждаемся что контейнер имеет position relative
+    if (container && getComputedStyle(container).position === 'static') {
+      (container as HTMLElement).style.position = 'relative';
     }
     
-    container.style.cssText = `
+    return container as HTMLElement;
+  }
+
+  private applyIndicatorToAvatar(avatar: HTMLElement, indicator: AvatarIndicator) {
+    // Находим правильный контейнер для вставки
+    const container = this.findAvatarContainer(avatar);
+    if (!container) return;
+    
+    // Удаляем старый индикатор если есть
+    const oldIndicator = container.querySelector('.jh-avatar-indicator-container');
+    if (oldIndicator) oldIndicator.remove();
+    
+    // Создаем контейнер индикатора
+    const indicatorContainer = document.createElement('div');
+    indicatorContainer.className = 'jh-avatar-indicator-container';
+    
+    // Позиционирование (по умолчанию справа сверху)
+    const top = '-4px';
+    const right = indicator.position === 'left' ? 'auto' : '-4px';
+    const left = indicator.position === 'left' ? '-4px' : 'auto';
+    
+    indicatorContainer.style.cssText = `
       position: absolute !important;
       top: ${top} !important;
       ${left !== 'auto' ? `left: ${left} !important;` : ''}
@@ -155,29 +185,29 @@ export class AvatarIndicatorManager {
       z-index: 999999 !important;
       pointer-events: none !important;
     `;
-    
+
     const icon = document.createElement('div');
     icon.className = `jh-avatar-indicator jh-avatar-indicator-${indicator.type}`;
-    icon.title = indicator.tooltip || '⚠️';
-    icon.innerHTML = indicator.icon || '⚠️';
+    icon.title = indicator.tooltip || '';
+    icon.innerHTML = '🚨';
     icon.style.cssText = `
-      width: 14px !important;
-      height: 14px !important;
+      width: 18px !important;
+      height: 18px !important;
       border-radius: 50% !important;
       background-color: ${indicator.color} !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      font-size: 10px !important;
+      font-size: 6px !important;
       color: white !important;
       font-weight: bold !important;
-      box-shadow: 0 0 6px ${indicator.color} !important;
+      box-shadow: 0 0 0 1px white, 0 0 0 2px ${indicator.color} !important;
+      border: 1px solid rgba(255, 255, 255, 0.5) !important;
+      text-shadow: 0 10px 2px rgba(255, 0, 0, 0.5) !important;
     `;
     
-    container.appendChild(icon);
-    
-    (avatarInner as HTMLElement).style.position = 'relative';
-    (avatarInner as HTMLElement).appendChild(container);
+    indicatorContainer.appendChild(icon);
+    container.appendChild(indicatorContainer);
   }
 
   updateAll() {
