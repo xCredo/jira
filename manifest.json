@@ -47,14 +47,14 @@
         "extension_pages": "script-src 'self'; object-src 'self'"
     },
     "content_scripts": [
-        {
-            "matches": [
-                "*://*/*"
-            ],
-            "js": [
-                "src/content.ts"
-            ]
-        }
+    {
+        "matches": ["*://*.atlassian.net/*"],
+        "js": ["src/cloud/content.cloud.ts"]
+    },
+    {
+        "matches": ["*://*/jira/*"],
+        "js": ["src/content.ts"]
+    }
     ],
     "permissions": [
         "tabs",
