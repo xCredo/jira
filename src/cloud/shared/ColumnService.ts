@@ -1,15 +1,31 @@
 // src/cloud/shared/ColumnService.ts
 // Сервис для работы с колонками доски Jira Cloud
 
-import { BoardPagePageObject } from './BoardPagePageObject';
+import type { IBoardPagePageObject } from './BoardPagePageObject';
 
+/**
+ * Информация о колонке доски
+ */
 export interface ColumnInfo {
+  /** Уникальный идентификатор колонки */
   id: string;
+  /** Название колонки */
   name: string;
+  /** Индекс колонки (начиная с 0) */
   index: number;
 }
 
+/**
+ * Сервис для работы с колонками доски Jira Cloud.
+ * Определяет колонки по DOM-элементам или по позиции карточек.
+ */
 export class ColumnService {
+  constructor(private readonly boardPage: IBoardPagePageObject) {}
+
+  /**
+   * Возвращает список всех колонок на доске
+   * @returns Массив объектов ColumnInfo с информацией о колонках
+   */
   getColumns(): ColumnInfo[] {
     try {
       // Способ 1: Парсинг из DOM (точный)
@@ -23,7 +39,6 @@ export class ColumnService {
 
       // Способ 2: Fallback - по карточкам
       return this.detectColumnsFromCards();
-
     } catch (error) {
       console.error('[ColumnService] Ошибка получения колонок:', error);
       return [];
@@ -51,7 +66,7 @@ export class ColumnService {
   private parseColumnsFromElements(columnElements: Element[]): ColumnInfo[] {
     return columnElements.map((element, index) => {
       let columnName = this.extractColumnName(element);
-      
+
       if (!columnName || columnName.trim() === '') {
         columnName = this.getFallbackColumnName(index, columnElements.length);
       }
@@ -59,7 +74,7 @@ export class ColumnService {
       return {
         id: `column-${index}`,
         name: columnName.trim(),
-        index: index
+        index,
       };
     });
   }
@@ -77,18 +92,16 @@ export class ColumnService {
 
     // Способ 2: Из элемента с data-testid содержащим column-name
     const columnNameElement = columnElement.querySelector(
-      '[data-testid*="column-name"], ' +
-      '[data-testid*="column-title"], ' +
-      '[title]'
+      '[data-testid*="column-name"], ' + '[data-testid*="column-title"], ' + '[title]'
     );
-    
+
     if (columnNameElement) {
       const title = columnNameElement.getAttribute('title');
       if (title) {
         console.log(`[ColumnService] Название из title: "${title}"`);
         return title;
       }
-      
+
       const textContent = columnNameElement.textContent || '';
       if (textContent) {
         const cleanText = textContent.replace(/\s*\d+\s*$/, '').trim();
@@ -100,21 +113,17 @@ export class ColumnService {
     }
 
     // Способ 3: Ищем любой текст в заголовке колонки
-    const header = columnElement.querySelector(
-      'h2, h3, header, ' +
-      '[class*="header"], ' +
-      '[class*="title"]'
-    );
-    
+    const header = columnElement.querySelector('h2, h3, header, ' + '[class*="header"], ' + '[class*="title"]');
+
     if (header) {
       const text = header.textContent || '';
       if (text) {
         const cleanText = text
           .replace(/\s*\d+\s*$/g, '')
-          .replace(/^\d+\s*/, '')     
+          .replace(/^\d+\s*/, '')
           .replace(/\s+/g, ' ')
           .trim();
-        
+
         if (cleanText && cleanText.length < 50) {
           console.log(`[ColumnService] Название из заголовка: "${cleanText}"`);
           return cleanText;
@@ -142,13 +151,13 @@ export class ColumnService {
       if (index === 3) return 'REVIEW';
       if (index === 4) return 'DONE';
     }
-    
+
     return `Column ${index + 1}`;
   }
 
   private detectColumnsFromCards(): ColumnInfo[] {
     try {
-      const cards = BoardPagePageObject.getAllCloudCards();
+      const cards = this.boardPage.getAllCloudCards();
       if (cards.length === 0) {
         return [];
       }
@@ -180,34 +189,38 @@ export class ColumnService {
       return columnGroups.map((colCards, index) => ({
         id: `column-${index}`,
         name: this.getFallbackColumnName(index, columnGroups.length),
-        index: index
+        index,
       }));
-
     } catch (error) {
       console.error('[ColumnService] Ошибка детекции колонок по карточкам:', error);
       return [];
     }
   }
 
+  /**
+   * Определяет ID колонки для указанной карточки
+   * @param card - HTML-элемент карточки
+   * @returns ID колонки или null, если не удалось определить
+   */
   getCardColumnId(card: HTMLElement): string | null {
     const columns = this.getColumns();
-    const cards = BoardPagePageObject.getAllCloudCards();
-    
+    const cards = this.boardPage.getAllCloudCards();
+
     if (!cards.length) return null;
-    
+
     const cardLeft = card.getBoundingClientRect().left;
     const allCards = Array.from(cards);
-    
+
     const cardsWithPos = allCards.map(c => ({
       c,
       left: c.getBoundingClientRect().left,
     }));
-    
+
     cardsWithPos.sort((a, b) => a.left - b.left);
-    
+
     let columnIndex = 0;
     let prevLeft = cardsWithPos[0].left;
-    
+
     for (let i = 0; i < cardsWithPos.length; i++) {
       if (Math.abs(cardsWithPos[i].left - prevLeft) > 150) {
         columnIndex++;
@@ -221,10 +234,3 @@ export class ColumnService {
     return null;
   }
 }
-
-export const columnService = new ColumnService();
-
-// Глобальный экспорт для обратной совместимости
-if (!window.JiraHelper) window.JiraHelper = {};
-window.JiraHelper.columnManager = columnService;
-window.JiraHelper.ColumnManager = columnService;

@@ -2,9 +2,11 @@
 // React-компонент настроек персональных WIP-лимитов
 
 import React, { useState, useEffect } from 'react';
-import { settingsService, WipLimitSettings } from '../../shared/SettingsService';
-import { assigneeService, Assignee } from '../../shared/AssigneeService';
-import { columnService, ColumnInfo } from '../../shared/ColumnService';
+import { cloudContainer } from '../../shared/di';
+import { settingsServiceToken, assigneeServiceToken, columnServiceToken } from '../../shared/di/tokens';
+import type { Settings } from '../../shared/SettingsService';
+import type { Assignee } from '../../shared/AssigneeService';
+import type { ColumnInfo } from '../../shared/ColumnService';
 
 interface PersonLimitRow {
   id: string;
@@ -35,28 +37,33 @@ export const PersonLimitsSettings: React.FC = () => {
   }, []);
 
   const loadSettings = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const settings = settingsService.getSettings();
     setEnabled(settings.personalWipLimits?.enabled || false);
     setLimits(settings.personalWipLimits?.limits || []);
   };
 
   const loadData = () => {
+    const assigneeService = cloudContainer.inject(assigneeServiceToken);
+    const columnService = cloudContainer.inject(columnServiceToken);
     setAvailableAssignees(assigneeService.getAllAssigneesFromCards());
     setAvailableColumns(columnService.getColumns());
   };
 
   const handleToggleEnabled = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const newEnabled = !enabled;
     setEnabled(newEnabled);
     settingsService.updateSettings({
       personalWipLimits: {
         enabled: newEnabled,
-        limits: limits,
+        limits,
       },
     });
   };
 
   const handleAddLimit = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     if (!newLimit.userId || newLimit.columnIds.length === 0) return;
 
     const selectedUser = availableAssignees.find(a => a.id === newLimit.userId);
@@ -93,6 +100,7 @@ export const PersonLimitsSettings: React.FC = () => {
   };
 
   const handleDeleteLimit = (id: string) => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const updatedLimits = limits.filter(l => l.id !== id);
     setLimits(updatedLimits);
     settingsService.updateSettings({
@@ -104,6 +112,7 @@ export const PersonLimitsSettings: React.FC = () => {
   };
 
   const handleUpdateLimit = (id: string, field: keyof PersonLimitRow, value: any) => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const updatedLimits = limits.map(l => {
       if (l.id === id) {
         return { ...l, [field]: value };
@@ -129,14 +138,10 @@ export const PersonLimitsSettings: React.FC = () => {
   return (
     <div className="person-limits-settings" style={{ padding: '20px' }}>
       <h2>Персональные WIP-лимиты</h2>
-      
+
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={handleToggleEnabled}
-          />
+          <input type="checkbox" checked={enabled} onChange={handleToggleEnabled} />
           Включить персональные WIP-лимиты
         </label>
       </div>
@@ -145,12 +150,12 @@ export const PersonLimitsSettings: React.FC = () => {
         <>
           <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
             <h3>Добавить новый лимит</h3>
-            
+
             <div style={{ marginBottom: '10px' }}>
               <label>Исполнитель:</label>
               <select
                 value={newLimit.userId}
-                onChange={(e) => setNewLimit({ ...newLimit, userId: e.target.value })}
+                onChange={e => setNewLimit({ ...newLimit, userId: e.target.value })}
                 style={{ marginLeft: '10px' }}
               >
                 <option value="">Выберите исполнителя</option>
@@ -183,7 +188,7 @@ export const PersonLimitsSettings: React.FC = () => {
               <input
                 type="number"
                 value={newLimit.limit}
-                onChange={(e) => setNewLimit({ ...newLimit, limit: parseInt(e.target.value) || 0 })}
+                onChange={e => setNewLimit({ ...newLimit, limit: parseInt(e.target.value) || 0 })}
                 min={1}
                 style={{ marginLeft: '10px', width: '60px' }}
               />
@@ -194,7 +199,7 @@ export const PersonLimitsSettings: React.FC = () => {
               <input
                 type="color"
                 value={newLimit.color}
-                onChange={(e) => setNewLimit({ ...newLimit, color: e.target.value })}
+                onChange={e => setNewLimit({ ...newLimit, color: e.target.value })}
                 style={{ marginLeft: '10px' }}
               />
             </div>
@@ -239,7 +244,7 @@ export const PersonLimitsSettings: React.FC = () => {
                         <input
                           type="number"
                           value={limit.limit}
-                          onChange={(e) => handleUpdateLimit(limit.id, 'limit', parseInt(e.target.value) || 0)}
+                          onChange={e => handleUpdateLimit(limit.id, 'limit', parseInt(e.target.value) || 0)}
                           min={1}
                           style={{ width: '60px' }}
                         />
@@ -248,7 +253,7 @@ export const PersonLimitsSettings: React.FC = () => {
                         <input
                           type="color"
                           value={limit.color}
-                          onChange={(e) => handleUpdateLimit(limit.id, 'color', e.target.value)}
+                          onChange={e => handleUpdateLimit(limit.id, 'color', e.target.value)}
                         />
                       </td>
                       <td style={{ padding: '8px' }}>

@@ -1,7 +1,6 @@
 // src/cloud/shared/BoardPagePageObject.ts
 // Page Object для работы с доской Jira Cloud
 
-import { Container, Token } from 'dioma';
 import React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 
@@ -149,13 +148,3 @@ export const BoardPagePageObject: IBoardPagePageObject = {
     return Array.from(document.querySelectorAll<HTMLElement>(this.selectors.issueCardCloud));
   },
 };
-
-export const boardPagePageObjectToken = new Token<IBoardPagePageObject>('boardPagePageObjectToken');
-
-export const registerBoardPagePageObjectInDI = (container: Container) => {
-  container.register({ token: boardPagePageObjectToken, value: BoardPagePageObject });
-};
-
-// Глобальный экспорт для обратной совместимости
-if (!window.JiraHelper) window.JiraHelper = {};
-window.JiraHelper.BoardPagePageObject = BoardPagePageObject;

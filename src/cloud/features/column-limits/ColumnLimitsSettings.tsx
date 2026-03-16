@@ -2,8 +2,9 @@
 // React-компонент настроек групповых WIP-лимитов
 
 import React, { useState, useEffect } from 'react';
-import { settingsService, ColumnGroupWipLimitSettings } from '../../shared/SettingsService';
-import { columnService, ColumnInfo } from '../../shared/ColumnService';
+import { cloudContainer } from '../../shared/di';
+import { settingsServiceToken, columnServiceToken } from '../../shared/di/tokens';
+import type { ColumnInfo } from '../../shared/ColumnService';
 
 interface ColumnGroupLimitRow {
   id: string;
@@ -33,27 +34,31 @@ export const ColumnLimitsSettings: React.FC = () => {
   }, []);
 
   const loadSettings = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const settings = settingsService.getSettings();
     setEnabled(settings.columnGroupWipLimits?.enabled || false);
     setLimits(settings.columnGroupWipLimits?.limits || []);
   };
 
   const loadData = () => {
+    const columnService = cloudContainer.inject(columnServiceToken);
     setAvailableColumns(columnService.getColumns());
   };
 
   const handleToggleEnabled = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const newEnabled = !enabled;
     setEnabled(newEnabled);
     settingsService.updateSettings({
       columnGroupWipLimits: {
         enabled: newEnabled,
-        limits: limits,
+        limits,
       },
     });
   };
 
   const handleAddLimit = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     if (!newLimit.name || newLimit.columnIds.length === 0) return;
 
     const selectedColumns = availableColumns.filter(c => newLimit.columnIds.includes(c.id));
@@ -87,6 +92,7 @@ export const ColumnLimitsSettings: React.FC = () => {
   };
 
   const handleDeleteLimit = (id: string) => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const updatedLimits = limits.filter(l => l.id !== id);
     setLimits(updatedLimits);
     settingsService.updateSettings({
@@ -98,6 +104,7 @@ export const ColumnLimitsSettings: React.FC = () => {
   };
 
   const handleUpdateLimit = (id: string, field: keyof ColumnGroupLimitRow, value: any) => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const updatedLimits = limits.map(l => {
       if (l.id === id) {
         return { ...l, [field]: value };
@@ -123,14 +130,10 @@ export const ColumnLimitsSettings: React.FC = () => {
   return (
     <div className="column-limits-settings" style={{ padding: '20px' }}>
       <h2>Групповые WIP-лимиты</h2>
-      
+
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={handleToggleEnabled}
-          />
+          <input type="checkbox" checked={enabled} onChange={handleToggleEnabled} />
           Включить групповые WIP-лимиты
         </label>
       </div>
@@ -139,13 +142,13 @@ export const ColumnLimitsSettings: React.FC = () => {
         <>
           <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
             <h3>Добавить новую группу</h3>
-            
+
             <div style={{ marginBottom: '10px' }}>
               <label>Название группы:</label>
               <input
                 type="text"
                 value={newLimit.name}
-                onChange={(e) => setNewLimit({ ...newLimit, name: e.target.value })}
+                onChange={e => setNewLimit({ ...newLimit, name: e.target.value })}
                 placeholder="Например: В разработке"
                 style={{ marginLeft: '10px', width: '200px' }}
               />
@@ -172,7 +175,7 @@ export const ColumnLimitsSettings: React.FC = () => {
               <input
                 type="number"
                 value={newLimit.limit}
-                onChange={(e) => setNewLimit({ ...newLimit, limit: parseInt(e.target.value) || 0 })}
+                onChange={e => setNewLimit({ ...newLimit, limit: parseInt(e.target.value) || 0 })}
                 min={1}
                 style={{ marginLeft: '10px', width: '60px' }}
               />
@@ -183,7 +186,7 @@ export const ColumnLimitsSettings: React.FC = () => {
               <input
                 type="color"
                 value={newLimit.baseColor}
-                onChange={(e) => setNewLimit({ ...newLimit, baseColor: e.target.value })}
+                onChange={e => setNewLimit({ ...newLimit, baseColor: e.target.value })}
                 style={{ marginLeft: '10px' }}
               />
             </div>
@@ -193,7 +196,7 @@ export const ColumnLimitsSettings: React.FC = () => {
               <input
                 type="color"
                 value={newLimit.warningColor}
-                onChange={(e) => setNewLimit({ ...newLimit, warningColor: e.target.value })}
+                onChange={e => setNewLimit({ ...newLimit, warningColor: e.target.value })}
                 style={{ marginLeft: '10px' }}
               />
             </div>
@@ -238,7 +241,7 @@ export const ColumnLimitsSettings: React.FC = () => {
                         <input
                           type="number"
                           value={limit.limit}
-                          onChange={(e) => handleUpdateLimit(limit.id, 'limit', parseInt(e.target.value) || 0)}
+                          onChange={e => handleUpdateLimit(limit.id, 'limit', parseInt(e.target.value) || 0)}
                           min={1}
                           style={{ width: '60px' }}
                         />
@@ -250,7 +253,7 @@ export const ColumnLimitsSettings: React.FC = () => {
                             <input
                               type="color"
                               value={limit.baseColor}
-                              onChange={(e) => handleUpdateLimit(limit.id, 'baseColor', e.target.value)}
+                              onChange={e => handleUpdateLimit(limit.id, 'baseColor', e.target.value)}
                             />
                           </div>
                           <div>
@@ -258,7 +261,7 @@ export const ColumnLimitsSettings: React.FC = () => {
                             <input
                               type="color"
                               value={limit.warningColor || '#FF0000'}
-                              onChange={(e) => handleUpdateLimit(limit.id, 'warningColor', e.target.value)}
+                              onChange={e => handleUpdateLimit(limit.id, 'warningColor', e.target.value)}
                             />
                           </div>
                         </div>

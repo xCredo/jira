@@ -1,10 +1,11 @@
 // src/cloud/features/person-limits/PersonLimitsApplier.ts
 // Applier для персональных WIP-лимитов в Jira Cloud
 
-import { settingsService } from '../../shared/SettingsService';
-import { columnService } from '../../shared/ColumnService';
-import { assigneeService, Assignee } from '../../shared/AssigneeService';
-import { avatarIndicatorService } from '../../shared/AvatarIndicatorService';
+import type { SettingsService } from '../../shared/SettingsService';
+import type { ColumnService } from '../../shared/ColumnService';
+import type { AssigneeService } from '../../shared/AssigneeService';
+import type { AvatarIndicatorService } from '../../shared/AvatarIndicatorService';
+import type { IBoardPagePageObject } from '../../shared/BoardPagePageObject';
 
 export interface WipLimit {
   id: string;
@@ -18,7 +19,16 @@ export interface WipLimit {
 
 export class PersonLimitsApplier {
   private enabled = false;
+
   private limits: WipLimit[] = [];
+
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly columnService: ColumnService,
+    private readonly assigneeService: AssigneeService,
+    private readonly avatarIndicatorService: AvatarIndicatorService,
+    private readonly boardPage: IBoardPagePageObject
+  ) {}
 
   init() {
     this.loadSettings();
@@ -26,7 +36,7 @@ export class PersonLimitsApplier {
   }
 
   private loadSettings() {
-    const settings = settingsService.getSettings();
+    const settings = this.settingsService.getSettings();
     this.enabled = settings.personalWipLimits?.enabled || false;
     this.limits = settings.personalWipLimits?.limits || [];
   }
@@ -39,38 +49,33 @@ export class PersonLimitsApplier {
     }
 
     console.log('[PersonLimitsApplier] Загружено лимитов:', this.limits.length);
-    
+
     this.limits.forEach(limit => {
-      const { 
-        exceeded, 
-        currentCount, 
-        cardsInLimitedColumns, 
-        allUserCards 
-      } = this.checkLimit(limit);
-      
+      const { exceeded, currentCount, cardsInLimitedColumns, allUserCards } = this.checkLimit(limit);
+
       if (exceeded) {
         console.log(`⚠️ ${limit.userName} превысил лимит: ${currentCount}/${limit.limit}`);
-        
-        avatarIndicatorService.addIndicator(limit.userId, {
+
+        this.avatarIndicatorService.addIndicator(limit.userId, {
+          userId: limit.userId,
           type: 'wip-overload',
           color: limit.color || '#FF0000',
-          tooltip: `${limit.userName} превысил WIP-лимит: ${currentCount}/${limit.limit}`
+          tooltip: `${limit.userName} превысил WIP-лимит: ${currentCount}/${limit.limit}`,
         });
 
         cardsInLimitedColumns.forEach(card => {
           this.markCardAsOverloaded(card, true, limit.color);
         });
-        
+
         allUserCards.forEach(card => {
           if (!cardsInLimitedColumns.includes(card)) {
             this.markCardAsOverloaded(card, false);
           }
         });
-        
       } else {
         console.log(`✅ ${limit.userName} в рамках лимита: ${currentCount}/${limit.limit}`);
-        
-        avatarIndicatorService.removeIndicator(limit.userId, 'wip-overload');
+
+        this.avatarIndicatorService.removeIndicator(limit.userId, 'wip-overload');
 
         allUserCards.forEach(card => {
           this.markCardAsOverloaded(card, false);
@@ -79,23 +84,23 @@ export class PersonLimitsApplier {
     });
   }
 
-  private checkLimit(limit: WipLimit): { 
-    exceeded: boolean; 
-    currentCount: number; 
+  private checkLimit(limit: WipLimit): {
+    exceeded: boolean;
+    currentCount: number;
     cardsInLimitedColumns: HTMLElement[];
-    allUserCards: HTMLElement[] 
+    allUserCards: HTMLElement[];
   } {
     try {
       const cards = this.getAllCards();
       const userCards: HTMLElement[] = [];
       const cardsInLimitedColumns: HTMLElement[] = [];
       let cardsInLimitedColumnsCount = 0;
-      
+
       cards.forEach(card => {
-        const cardAssignee = assigneeService.getAssigneeForCard(card);
+        const cardAssignee = this.assigneeService.getAssigneeForCard(card);
         if (cardAssignee?.id === limit.userId) {
           userCards.push(card);
-          const columnId = columnService.getCardColumnId(card);
+          const columnId = this.columnService.getCardColumnId(card);
           if (columnId && limit.columnIds.includes(columnId)) {
             cardsInLimitedColumnsCount++;
             cardsInLimitedColumns.push(card);
@@ -106,27 +111,22 @@ export class PersonLimitsApplier {
       return {
         exceeded: cardsInLimitedColumnsCount > limit.limit,
         currentCount: cardsInLimitedColumnsCount,
-        cardsInLimitedColumns: cardsInLimitedColumns,
-        allUserCards: userCards
+        cardsInLimitedColumns,
+        allUserCards: userCards,
       };
-
     } catch (error) {
       console.error('[PersonLimitsApplier] Ошибка проверки:', error);
-      return { 
-        exceeded: false, 
-        currentCount: 0, 
-        cardsInLimitedColumns: [], 
-        allUserCards: [] 
+      return {
+        exceeded: false,
+        currentCount: 0,
+        cardsInLimitedColumns: [],
+        allUserCards: [],
       };
     }
   }
 
   private getAllCards(): HTMLElement[] {
-    const BoardPagePageObject = (window as any).JiraHelper?.BoardPagePageObject;
-    if (BoardPagePageObject) {
-      return Array.from(BoardPagePageObject.getAllCloudCards() || []);
-    }
-    return [];
+    return Array.from(this.boardPage.getAllCloudCards() || []);
   }
 
   private markCardAsOverloaded(card: HTMLElement, overloaded: boolean, color?: string) {
@@ -134,24 +134,24 @@ export class PersonLimitsApplier {
       card.setAttribute('data-jh-wip-overloaded', 'true');
       card.setAttribute('data-jh-wip-color', color);
       card.classList.add('jh-wip-overloaded', 'jh-wip-overloaded-active');
-      
+
       const rgb = this.hexToRgb(color);
       card.style.setProperty('--wip-custom-color', color, 'important');
       card.style.setProperty('--wip-r', rgb.r.toString(), 'important');
       card.style.setProperty('--wip-g', rgb.g.toString(), 'important');
       card.style.setProperty('--wip-b', rgb.b.toString(), 'important');
-      
+
       this.applyWipHighlight(card, color);
     } else {
       card.removeAttribute('data-jh-wip-overloaded');
       card.removeAttribute('data-jh-wip-color');
       card.classList.remove('jh-wip-overloaded', 'jh-wip-overloaded-active');
-      
+
       card.style.removeProperty('--wip-custom-color');
       card.style.removeProperty('--wip-r');
       card.style.removeProperty('--wip-g');
       card.style.removeProperty('--wip-b');
-      
+
       this.removeWipHighlight(card);
     }
   }
@@ -160,33 +160,35 @@ export class PersonLimitsApplier {
     if (!color) {
       color = '#808080';
     }
-    
+
     const innerCard = this.getInnerCard(card);
-    
+
     this.clearAssigneeHighlight(card);
-    
+
     card.classList.add('jh-wip-overloaded-active');
-    
+
     innerCard.style.setProperty('border-left', `10px solid ${color}`, 'important');
     innerCard.style.setProperty('padding-left', '10px', 'important');
-    
+
     const bgColor = this.hexToRgba(color, 0.4);
     innerCard.style.setProperty('background-color', bgColor, 'important');
     innerCard.style.setProperty('background', bgColor, 'important');
-    
+
     innerCard.style.setProperty('border', `5px solid ${color}`, 'important');
     innerCard.style.setProperty('border-radius', '6px', 'important');
-    innerCard.style.setProperty('box-shadow', 
-      `0 0 0 3px ${this.hexToRgba(color, 0.3)}, 0 0 15px ${this.hexToRgba(color, 0.2)}`, 
-      'important');
-    
+    innerCard.style.setProperty(
+      'box-shadow',
+      `0 0 0 3px ${this.hexToRgba(color, 0.3)}, 0 0 15px ${this.hexToRgba(color, 0.2)}`,
+      'important'
+    );
+
     this.addWarningIcon(innerCard, color);
   }
 
   private addWarningIcon(element: HTMLElement, color: string) {
     const oldIcon = element.querySelector('.jh-wip-warning-icon');
     if (oldIcon) oldIcon.remove();
-    
+
     const icon = document.createElement('div');
     icon.className = 'jh-wip-warning-icon';
     icon.innerHTML = '⚠️';
@@ -199,7 +201,7 @@ export class PersonLimitsApplier {
       pointer-events: none !important;
       opacity: 0.9 !important;
     `;
-    
+
     element.appendChild(icon);
   }
 
@@ -217,23 +219,23 @@ export class PersonLimitsApplier {
     if (hex.startsWith('rgba')) {
       return hex.replace(/[\d.]+\)$/g, `${alpha})`);
     }
-    
+
     if (hex.startsWith('#')) {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
-    
+
     return `rgba(128, 128, 128, ${alpha})`;
   }
 
   private removeWipHighlight(card: HTMLElement) {
     const innerCard = this.getInnerCard(card);
-    
+
     const warningIcon = innerCard.querySelector('.jh-wip-warning-icon');
     if (warningIcon) warningIcon.remove();
-    
+
     innerCard.style.borderLeft = '';
     innerCard.style.paddingLeft = '';
     innerCard.style.backgroundColor = '';
@@ -245,10 +247,10 @@ export class PersonLimitsApplier {
 
   private clearAssigneeHighlight(card: HTMLElement) {
     const innerCard = this.getInnerCard(card);
-    
+
     const stripe = innerCard.querySelector('.jira-helper-assignee-stripe');
     if (stripe) stripe.remove();
-    
+
     if (innerCard.hasAttribute('data-assignee-highlight')) {
       innerCard.style.backgroundColor = '';
       innerCard.style.border = '';
@@ -257,9 +259,10 @@ export class PersonLimitsApplier {
   }
 
   private getInnerCard(card: HTMLElement): HTMLElement {
-    return card.querySelector<HTMLElement>(
-      '[data-testid="software-context-menu.ui.context-menu.children-wrapper"] > div'
-    ) || card;
+    return (
+      card.querySelector<HTMLElement>('[data-testid="software-context-menu.ui.context-menu.children-wrapper"] > div') ||
+      card
+    );
   }
 
   private clearWipIndicators() {
@@ -274,14 +277,7 @@ export class PersonLimitsApplier {
   isAssigneeOverloaded(assigneeId: string): boolean {
     const limit = this.limits.find(l => l.userId === assigneeId);
     if (!limit) return false;
-    
+
     return this.checkLimit(limit).exceeded;
   }
 }
-
-export const personLimitsApplier = new PersonLimitsApplier();
-
-// Глобальный экспорт
-if (!window.JiraHelper) window.JiraHelper = {};
-window.JiraHelper.wipLimitsManager = personLimitsApplier;
-window.JiraHelper.PersonLimitsApplier = personLimitsApplier;

@@ -2,8 +2,10 @@
 // React-компонент настроек подсветки исполнителей
 
 import React, { useState, useEffect } from 'react';
-import { settingsService, AssigneeHighlightSettings } from '../../shared/SettingsService';
-import { assigneeService, Assignee } from '../../shared/AssigneeService';
+import { cloudContainer } from '../../shared/di';
+import { settingsServiceToken, assigneeServiceToken } from '../../shared/di/tokens';
+import type { AssigneeHighlightSettings } from '../../shared/SettingsService';
+import type { Assignee } from '../../shared/AssigneeService';
 
 type VisualizationType = 'stripe' | 'background' | 'border';
 
@@ -22,6 +24,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
   }, []);
 
   const loadSettings = () => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const settings = settingsService.getSettings();
     setEnabled(settings.assigneeHighlight?.enabled || false);
     setVisualizationType(settings.assigneeHighlight?.visualizationType || 'stripe');
@@ -32,6 +35,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
   };
 
   const loadData = () => {
+    const assigneeService = cloudContainer.inject(assigneeServiceToken);
     setAvailableAssignees(assigneeService.getAllAssigneesFromCards());
   };
 
@@ -70,6 +74,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
   };
 
   const updateSettings = (updates: Partial<AssigneeHighlightSettings>) => {
+    const settingsService = cloudContainer.inject(settingsServiceToken);
     const currentSettings = settingsService.getSettings();
     settingsService.updateSettings({
       assigneeHighlight: {
@@ -82,14 +87,10 @@ export const AssigneeHighlighterSettings: React.FC = () => {
   return (
     <div className="assignee-highlighter-settings" style={{ padding: '20px' }}>
       <h2>Подсветка исполнителей</h2>
-      
+
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={handleToggleEnabled}
-          />
+          <input type="checkbox" checked={enabled} onChange={handleToggleEnabled} />
           Включить подсветку исполнителей
         </label>
       </div>
@@ -98,7 +99,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
         <>
           <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
             <h3>Тип визуализации</h3>
-            
+
             <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input
@@ -110,7 +111,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
                 />
                 Полоска слева
               </label>
-              
+
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input
                   type="radio"
@@ -121,7 +122,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
                 />
                 Цвет фона
               </label>
-              
+
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <input
                   type="radio"
@@ -137,25 +138,17 @@ export const AssigneeHighlighterSettings: React.FC = () => {
 
           <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
             <h3>Настройки</h3>
-            
+
             <div style={{ marginTop: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="checkbox"
-                  checked={autoColors}
-                  onChange={handleAutoColorsToggle}
-                />
+                <input type="checkbox" checked={autoColors} onChange={handleAutoColorsToggle} />
                 Автоматические цвета
               </label>
             </div>
 
             <div style={{ marginTop: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="checkbox"
-                  checked={highlightUnassigned}
-                  onChange={handleHighlightUnassignedToggle}
-                />
+                <input type="checkbox" checked={highlightUnassigned} onChange={handleHighlightUnassignedToggle} />
                 Подсвечивать "Не назначено"
               </label>
             </div>
@@ -166,7 +159,7 @@ export const AssigneeHighlighterSettings: React.FC = () => {
                 <input
                   type="color"
                   value={unassignedColor.startsWith('rgba') ? '#000000' : unassignedColor}
-                  onChange={(e) => handleUnassignedColorChange(e.target.value)}
+                  onChange={e => handleUnassignedColorChange(e.target.value)}
                   style={{ marginLeft: '10px' }}
                 />
               </div>
@@ -176,18 +169,21 @@ export const AssigneeHighlighterSettings: React.FC = () => {
           {!autoColors && (
             <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
               <h3>Кастомные цвета</h3>
-              
+
               {availableAssignees.length === 0 ? (
                 <p>Нет назначенных исполнителей на доске</p>
               ) : (
                 <div style={{ marginTop: '10px' }}>
                   {availableAssignees.map(assignee => (
-                    <div key={assignee.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div
+                      key={assignee.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}
+                    >
                       <span style={{ width: '150px' }}>{assignee.name}</span>
                       <input
                         type="color"
                         value={customColors[assignee.id] || assignee.color || '#808080'}
-                        onChange={(e) => handleCustomColorChange(assignee.id, e.target.value)}
+                        onChange={e => handleCustomColorChange(assignee.id, e.target.value)}
                       />
                       <div
                         style={{

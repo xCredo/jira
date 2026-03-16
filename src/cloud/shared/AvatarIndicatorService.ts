@@ -1,26 +1,40 @@
 // src/cloud/shared/AvatarIndicatorService.ts
 // Сервис для отображения индикаторов на аватарах пользователей
 
+import type { AssigneeService } from './AssigneeService';
+
+/**
+ * Конфигурация индикатора на аватаре
+ */
 export interface AvatarIndicator {
+  /** ID пользователя */
   userId: string;
+  /** Тип индикатора */
   type: 'wip-overload' | 'group-wip-overload' | 'column-limit' | 'custom';
+  /** Цвет индикатора */
   color: string;
+  /** Текст подсказки */
   tooltip?: string;
+  /** Иконка (эмодзи) */
   icon?: string;
+  /** Позиция индикатора */
   position?: 'left' | 'right' | 'top' | 'bottom';
 }
 
+/**
+ * Сервис для отображения индикаторов на аватарах пользователей.
+ * Управляет визуальными индикаторами перегрузки WIP-лимитов.
+ */
 export class AvatarIndicatorService {
-  private static instance: AvatarIndicatorService;
   private indicators = new Map<string, AvatarIndicator[]>();
-  
-  static getInstance(): AvatarIndicatorService {
-    if (!AvatarIndicatorService.instance) {
-      AvatarIndicatorService.instance = new AvatarIndicatorService();
-    }
-    return AvatarIndicatorService.instance;
-  }
 
+  constructor(private readonly assigneeService: AssigneeService) {}
+
+  /**
+   * Добавляет индикатор для пользователя
+   * @param userId - ID пользователя
+   * @param indicator - Конфигурация индикатора
+   */
   addIndicator(userId: string, indicator: AvatarIndicator) {
     const userIndicators = this.indicators.get(userId) || [];
     const filtered = userIndicators.filter(i => i.type !== indicator.type);
@@ -29,6 +43,11 @@ export class AvatarIndicatorService {
     this.refreshUserAvatar(userId);
   }
 
+  /**
+   * Удаляет индикатор указанного типа для пользователя
+   * @param userId - ID пользователя
+   * @param type - Тип индикатора
+   */
   removeIndicator(userId: string, type: string) {
     const userIndicators = this.indicators.get(userId);
     if (userIndicators) {
@@ -38,6 +57,10 @@ export class AvatarIndicatorService {
     }
   }
 
+  /**
+   * Удаляет все индикаторы указанного типа для всех пользователей
+   * @param type - Тип индикатора
+   */
   removeIndicatorsByType(type: string) {
     const affectedUsers: string[] = [];
     this.indicators.forEach((indicators, userId) => {
@@ -52,9 +75,9 @@ export class AvatarIndicatorService {
 
   private refreshUserAvatar(userId: string) {
     const indicators = this.indicators.get(userId) || [];
-    
+
     let indicatorToShow: AvatarIndicator | null = null;
-    
+
     const personalWip = indicators.find(i => i.type === 'wip-overload');
     if (personalWip) {
       indicatorToShow = personalWip;
@@ -89,21 +112,18 @@ export class AvatarIndicatorService {
 
   private findUserAvatars(userId: string): HTMLElement[] {
     const avatars: HTMLElement[] = [];
-    
+
     let userName = '';
     try {
-      const assigneeService = (window as any).JiraHelper?.assigneeManager;
-      if (assigneeService) {
-        const allUsers = assigneeService.getAllAssigneesFromCards();
-        const user = allUsers.find((u: any) => u.id === userId);
-        if (user) {
-          userName = user.name || user.displayName;
-        }
+      const allUsers = this.assigneeService.getAllAssigneesFromCards();
+      const user = allUsers.find(u => u.id === userId);
+      if (user) {
+        userName = user.name || user.displayName;
       }
     } catch (error) {}
-    
+
     if (!userName) return avatars;
-    
+
     const allAvatars = document.querySelectorAll('[data-testid*="ak-avatar"], [data-testid*="avatar"]');
     allAvatars.forEach(avatar => {
       const label = avatar.querySelector('[data-testid*="ak-avatar--label"]');
@@ -111,7 +131,7 @@ export class AvatarIndicatorService {
         avatars.push(avatar as HTMLElement);
         return;
       }
-      
+
       const img = avatar.querySelector('img');
       if (img && img.alt && img.alt.includes(userName)) {
         if (!avatars.includes(avatar as HTMLElement)) {
@@ -119,44 +139,45 @@ export class AvatarIndicatorService {
         }
         return;
       }
-      
+
       if (avatar.textContent && avatar.textContent.includes(userName)) {
         if (!avatars.includes(avatar as HTMLElement)) {
           avatars.push(avatar as HTMLElement);
         }
       }
     });
-    
+
     return avatars;
   }
 
   private findAvatarContainer(avatar: HTMLElement): HTMLElement | null {
-    const container = avatar.closest('[data-testid*="filters.ui.filters.assignee.stateless.avatar"]') || 
-                     avatar.closest('._2rko1rr0') ||
-                     avatar.closest('[data-testid*="ak-avatar"]') ||
-                     avatar;
-    
+    const container =
+      avatar.closest('[data-testid*="filters.ui.filters.assignee.stateless.avatar"]') ||
+      avatar.closest('._2rko1rr0') ||
+      avatar.closest('[data-testid*="ak-avatar"]') ||
+      avatar;
+
     if (container && getComputedStyle(container).position === 'static') {
       (container as HTMLElement).style.position = 'relative';
     }
-    
+
     return container as HTMLElement;
   }
 
   private applyIndicatorToAvatar(avatar: HTMLElement, indicator: AvatarIndicator) {
     const container = this.findAvatarContainer(avatar);
     if (!container) return;
-    
+
     const oldIndicator = container.querySelector('.jh-avatar-indicator-container');
     if (oldIndicator) oldIndicator.remove();
-    
+
     const indicatorContainer = document.createElement('div');
     indicatorContainer.className = 'jh-avatar-indicator-container';
-    
+
     const top = '-4px';
     const right = indicator.position === 'left' ? 'auto' : '-4px';
     const left = indicator.position === 'left' ? '-4px' : 'auto';
-    
+
     indicatorContainer.style.cssText = `
       position: absolute !important;
       top: ${top} !important;
@@ -185,28 +206,28 @@ export class AvatarIndicatorService {
       border: 1px solid rgba(255, 255, 255, 0.5) !important;
       text-shadow: 0 10px 2px rgba(255, 0, 0, 0.5) !important;
     `;
-    
+
     indicatorContainer.appendChild(icon);
     container.appendChild(indicatorContainer);
   }
 
+  /**
+   * Обновляет все индикаторы на аватарах
+   */
   updateAll() {
     this.indicators.forEach((_, userId) => {
       this.refreshUserAvatar(userId);
     });
   }
 
+  /**
+   * Проверяет, есть ли индикатор указанного типа у пользователя
+   * @param userId - ID пользователя
+   * @param type - Тип индикатора
+   * @returns true, если индикатор есть
+   */
   hasIndicator(userId: string, type: string): boolean {
     const indicators = this.indicators.get(userId);
     return indicators ? indicators.some(i => i.type === type) : false;
   }
-}
-
-export const avatarIndicatorService = AvatarIndicatorService.getInstance();
-
-// Глобальный экспорт для обратной совместимости
-if (typeof window !== 'undefined') {
-  (window as any).JiraHelper = (window as any).JiraHelper || {};
-  (window as any).JiraHelper.avatarIndicatorManager = avatarIndicatorService;
-  (window as any).JiraHelper.AvatarIndicatorManager = avatarIndicatorService;
 }

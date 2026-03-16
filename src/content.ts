@@ -100,47 +100,6 @@ async function start() {
 
   // @ts-expect-error
   runModifications(modificationsMap);
-  if (window.location.hostname.includes('atlassian.net')) {
-  console.log('[Jira Helper] Обнаружен Jira Cloud, монтируем кнопку вручную');
-  
-  setTimeout(() => {
-    const mountButton = () => {
-      const controlsBar = document.querySelector('[data-testid="software-board.header.controls-bar"]');
-      if (controlsBar && !controlsBar.querySelector('[data-jh-random-color-button]')) {
-        const container = document.createElement('div');
-        container.setAttribute('data-jh-random-color-button', '');
-        container.style.display = 'inline-block';
-        container.style.marginLeft = '8px';
-        container.style.position = 'relative';
-        controlsBar.appendChild(container);
-
-        import('./column-limits/BoardPage/RandomColorButton').then(({ RandomColorButton }) => {
-          import('react-dom/client').then(({ createRoot }) => {
-            const root = createRoot(container);
-            root.render(React.createElement(RandomColorButton));
-            
-            // Импортируем и вызываем initializeCore
-            import('./core').then(({ initializeCore }) => {
-              initializeCore();
-              console.log('[Jira Helper] Ядро инициализировано для Cloud');
-            });
-          });
-        });
-        return true;
-      }
-      return false;
-    };
-
-    if (!mountButton()) {
-      const observer = new MutationObserver(() => {
-        if (mountButton()) {
-          observer.disconnect();
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
-  }, 2000);
-}
 }
 
 start();

@@ -1,81 +1,99 @@
 // src/cloud/content.cloud.ts
 // Точка входа для Jira Cloud
+import './styles.css';
 
+import React from 'react';
+import { createRoot } from 'react-dom/client';
 import {
-  settingsService,
-  columnService,
-  assigneeService,
-  avatarIndicatorService,
-  dynamicUpdater,
-  BoardPagePageObject,
-  registerBoardPagePageObjectInDI,
-} from './shared';
+  cloudContainer,
+  registerCloudServices,
+  settingsServiceToken,
+  personLimitsApplierToken,
+  columnLimitsApplierToken,
+  assigneeHighlighterApplierToken,
+  dynamicUpdaterToken,
+} from './shared/di';
+import { SettingsButton } from './ui';
 
-import { personLimitsApplier } from './features/person-limits';
-import { columnLimitsApplier, columnGroupLimitPanel } from './features/column-limits';
-import { assigneeHighlighterApplier } from './features/assignee-highlighter';
+/**
+ * Монтирует кнопку настроек в header Jira Cloud
+ */
+function mountSettingsButton(): boolean {
+  // Ищем контейнер для кнопки в Jira Cloud
+  const controlsBar = document.querySelector('[data-testid="software-board.header.controls-bar"]');
 
-declare global {
-  interface Window {
-    JiraHelper: any;
+  if (controlsBar && !controlsBar.querySelector('[data-jh-settings-button]')) {
+    const container = document.createElement('div');
+    container.setAttribute('data-jh-settings-button', '');
+    container.style.display = 'inline-block';
+    container.style.marginLeft = '8px';
+    container.style.position = 'relative';
+    controlsBar.appendChild(container);
+
+    const root = createRoot(container);
+    root.render(React.createElement(SettingsButton));
+
+    console.log('[Jira Helper Cloud] Кнопка настроек смонтирована');
+    return true;
   }
+
+  return false;
 }
 
+/**
+ * Ожидает появления контейнера и монтирует кнопку
+ */
+function waitForMount(): void {
+  if (mountSettingsButton()) {
+    return;
+  }
+
+  // Если контейнер ещё не появился, ждём
+  const observer = new MutationObserver(() => {
+    if (mountSettingsButton()) {
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Таймаут на случай, если контейнер так и не появится
+  setTimeout(() => {
+    observer.disconnect();
+  }, 10000);
+}
 // Инициализация всех модулей
 export function initializeCloudExtension(): void {
   console.log('[Jira Helper Cloud] Инициализация расширения для Jira Cloud');
 
-  // Регистрируем в глобальном объекте
-  window.JiraHelper = window.JiraHelper || {};
-  
-  // Сервисы
-  window.JiraHelper.settingsService = settingsService;
-  window.JiraHelper.columnService = columnService;
-  window.JiraHelper.assigneeService = assigneeService;
-  window.JiraHelper.avatarIndicatorService = avatarIndicatorService;
-  window.JiraHelper.dynamicUpdater = dynamicUpdater;
-  window.JiraHelper.BoardPagePageObject = BoardPagePageObject;
-  
-  // Обратная совместимость со старыми именами
-  window.JiraHelper.settingsManager = settingsService;
-  window.JiraHelper.columnManager = columnService;
-  window.JiraHelper.assigneeManager = assigneeService;
-  window.JiraHelper.avatarIndicatorManager = avatarIndicatorService;
-  
-  // Appliers
-  window.JiraHelper.personLimitsApplier = personLimitsApplier;
-  window.JiraHelper.columnLimitsApplier = columnLimitsApplier;
-  window.JiraHelper.columnGroupLimitPanel = columnGroupLimitPanel;
-  window.JiraHelper.assigneeHighlighterApplier = assigneeHighlighterApplier;
-  
-  // Обратная совместимость со старыми именами
-  window.JiraHelper.wipLimitsManager = personLimitsApplier;
-  window.JiraHelper.WipLimitsManager = personLimitsApplier;
-  window.JiraHelper.GroupWipLimitsManager = columnLimitsApplier;
-  window.JiraHelper.ColumnGroupVisualizer = columnGroupLimitPanel;
-  window.JiraHelper.visualizationManager = assigneeHighlighterApplier;
-  
-  console.log('[Jira Helper Cloud] Модули зарегистрированы');
+  // Регистрируем все сервисы в DI-контейнере
+  registerCloudServices();
+
+  // Монтируем кнопку настроек
+  waitForMount();
+
+  // Получаем appliers из контейнера
+  const personLimitsApplier = cloudContainer.inject(personLimitsApplierToken);
+  const columnLimitsApplier = cloudContainer.inject(columnLimitsApplierToken);
+  const assigneeHighlighterApplier = cloudContainer.inject(assigneeHighlighterApplierToken);
+  const dynamicUpdater = cloudContainer.inject(dynamicUpdaterToken);
+  const settingsService = cloudContainer.inject(settingsServiceToken);
 
   // Инициализируем appliers
   personLimitsApplier.init();
   columnLimitsApplier.init();
 
-  // Запускаем DynamicUpdater
-  setTimeout(() => {
-    dynamicUpdater.start();
-    console.log('[Jira Helper Cloud] DynamicUpdater запущен');
-  }, 1500);
+  // Запускаем DynamicUpdater сразу
+  dynamicUpdater.start();
+  console.log('[Jira Helper Cloud] DynamicUpdater запущен');
 
-  // Применяем начальные настройки
+  // Применяем начальные настройки сразу
   const settings = settingsService.getSettings();
-  
+
   // Включаем подсветку исполнителей если настроена
   if (settings.assigneeHighlight?.enabled) {
-    setTimeout(() => {
-      assigneeHighlighterApplier.enable();
-      console.log('[Jira Helper Cloud] Подсветка исполнителей включена');
-    }, 2000);
+    assigneeHighlighterApplier.enable();
+    console.log('[Jira Helper Cloud] Подсветка исполнителей включена');
   }
 
   console.log('[Jira Helper Cloud] Инициализация завершена');
@@ -85,27 +103,27 @@ export function initializeCloudExtension(): void {
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initializeCloudExtension, 1000);
+      initializeCloudExtension();
     });
   } else {
-    setTimeout(initializeCloudExtension, 1000);
+    initializeCloudExtension();
   }
 }
 
-// Экспорт для использования в других модулях
+// Экспорт контейнера для внешнего использования
+export { cloudContainer };
+
+// Экспорт токенов для получения сервисов
 export {
-  settingsService,
-  columnService,
-  assigneeService,
-  avatarIndicatorService,
-  dynamicUpdater,
-  BoardPagePageObject,
-  registerBoardPagePageObjectInDI,
-  personLimitsApplier,
-  columnLimitsApplier,
-  columnGroupLimitPanel,
-  assigneeHighlighterApplier,
-};
+  settingsServiceToken,
+  columnServiceToken,
+  assigneeServiceToken,
+  avatarIndicatorServiceToken,
+  personLimitsApplierToken,
+  columnLimitsApplierToken,
+  assigneeHighlighterApplierToken,
+  dynamicUpdaterToken,
+} from './shared/di';
 
 // Экспорт типов
 export type { Settings, AssigneeHighlightSettings, WipLimitSettings, ColumnGroupWipLimitSettings } from './shared';

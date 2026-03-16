@@ -1,21 +1,31 @@
 // src/cloud/shared/AssigneeService.ts
 // Сервис для работы с исполнителями на доске Jira Cloud
 
-import { settingsService } from './SettingsService';
+import type { SettingsService } from './SettingsService';
 
+/**
+ * Информация об исполнителе задачи
+ */
 export interface Assignee {
+  /** Уникальный идентификатор исполнителя */
   id: string;
+  /** Полное имя исполнителя */
   name: string;
+  /** Короткое отображаемое имя (инициалы) */
   displayName: string;
+  /** Цвет для подсветки */
   color: string;
+  /** URL аватара */
   avatarUrl?: string;
 }
 
 let counter = 0;
 
+/**
+ * Сервис для работы с исполнителями на доске Jira Cloud.
+ * Извлекает информацию об исполнителях из карточек и назначает цвета.
+ */
 export class AssigneeService {
-  private static instance: AssigneeService;
-
   private readonly colorPalette = [
     '#FF0000', // Красный
     '#FF7F00', // Оранжевый
@@ -27,15 +37,12 @@ export class AssigneeService {
     '#000000', // Чёрный
   ];
 
-  private constructor() {}
+  constructor(private readonly settingsService: SettingsService) {}
 
-  static getInstance(): AssigneeService {
-    if (!AssigneeService.instance) {
-      AssigneeService.instance = new AssigneeService();
-    }
-    return AssigneeService.instance;
-  }
-
+  /**
+   * Возвращает список всех исполнителей на доске
+   * @returns Массив объектов Assignee с назначенными цветами
+   */
   getAllAssigneesFromCards(): Assignee[] {
     const cards = this.getAllCards();
     const assigneesMap = new Map<string, Omit<Assignee, 'color'>>();
@@ -59,7 +66,11 @@ export class AssigneeService {
 
   private cache = new Map();
 
-  // Получить исполнителя для конкретной карточки
+  /**
+   * Возвращает исполнителя для указанной карточки
+   * @param card - HTML-элемент карточки
+   * @returns Объект Assignee или null, если исполнитель не найден
+   */
   getAssigneeForCard(card: HTMLElement): Assignee | null {
     const assigneeData = this.getAssigneeFromCard(card);
     if (!assigneeData) return null;
@@ -74,7 +85,7 @@ export class AssigneeService {
       // СПОСОБ 1: Ищем скрытый текст с именем исполнителя
       const hiddenElements = card.querySelectorAll('[hidden], [aria-hidden="true"]');
 
-      for (const element of hiddenElements) {
+      for (const element of Array.from(hiddenElements)) {
         const text = element.textContent?.trim();
         if (!text) continue;
 
@@ -106,7 +117,7 @@ export class AssigneeService {
       // СПОСОБ 2: Ищем по data-testid
       const assigneeContainers = card.querySelectorAll('[data-testid*="assignee"], [data-testid*="avatar"]');
 
-      for (const container of assigneeContainers) {
+      for (const container of Array.from(assigneeContainers)) {
         const hiddenText = container.querySelector('[hidden], [aria-hidden="true"]');
         const text = hiddenText?.textContent?.trim();
 
@@ -147,14 +158,18 @@ export class AssigneeService {
       );
 
       if (!avatarImg) {
-        const gravatarImg = card.querySelector<HTMLImageElement>('img[src*="gravatar.com"]');
-        if (gravatarImg?.src) {
-          return gravatarImg.src;
+        const gravatarImgs = card.querySelectorAll<HTMLImageElement>('img[src*="gravatar.com"]');
+        for (const img of Array.from(gravatarImgs)) {
+          if (img?.src) {
+            return img.src;
+          }
         }
 
-        const anyAvatar = card.querySelector<HTMLImageElement>('img[src*="avatar"]');
-        if (anyAvatar?.src) {
-          return anyAvatar.src;
+        const anyAvatars = card.querySelectorAll<HTMLImageElement>('img[src*="avatar"]');
+        for (const img of Array.from(anyAvatars)) {
+          if (img?.src) {
+            return img.src;
+          }
         }
       }
 
@@ -181,16 +196,14 @@ export class AssigneeService {
 
   // Назначение цветов исполнителям
   private assignColorsToAssignees(assignees: Assignee[]): void {
-    const settings = settingsService.getSettings();
+    const settings = this.settingsService.getSettings();
 
     assignees.forEach((assignee, index) => {
       if (settings.assigneeHighlight?.customColors?.[assignee.id]) {
         assignee.color = settings.assigneeHighlight.customColors[assignee.id];
-      }
-      else if (assignee.id === 'unassigned') {
+      } else if (assignee.id === 'unassigned') {
         assignee.color = 'rgba(0, 0, 0, 0.5)';
-      }
-      else {
+      } else {
         assignee.color = this.colorPalette[index % this.colorPalette.length];
       }
     });
@@ -217,13 +230,4 @@ export class AssigneeService {
     }
     return Math.abs(hash).toString(16);
   }
-}
-
-export const assigneeService = AssigneeService.getInstance();
-
-// Глобальный экспорт для обратной совместимости
-if (typeof window !== 'undefined') {
-  (window as any).JiraHelper = (window as any).JiraHelper || {};
-  (window as any).JiraHelper.assigneeManager = assigneeService;
-  (window as any).JiraHelper.AssigneeManager = assigneeService;
 }

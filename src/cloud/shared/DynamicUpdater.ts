@@ -1,20 +1,24 @@
 // src/cloud/shared/DynamicUpdater.ts
 // Динамический обновлятель для отслеживания изменений на доске
 
+import type { PersonLimitsApplier } from '../features/person-limits/PersonLimitsApplier';
+import type { ColumnLimitsApplier } from '../features/column-limits/ColumnLimitsApplier';
+
 export class DynamicUpdater {
-  private static instance: DynamicUpdater;
   private observer: MutationObserver | null = null;
+
   private boardContainer: HTMLElement | null = null;
-  private updateTimeout: NodeJS.Timeout | null = null;
+
+  private updateTimeout: ReturnType<typeof setTimeout> | null = null;
+
   private readonly DEBOUNCE_TIME = 500;
+
   private isUpdating = false;
 
-  static getInstance(): DynamicUpdater {
-    if (!DynamicUpdater.instance) {
-      DynamicUpdater.instance = new DynamicUpdater();
-    }
-    return DynamicUpdater.instance;
-  }
+  constructor(
+    private readonly personLimitsApplier: PersonLimitsApplier,
+    private readonly columnLimitsApplier: ColumnLimitsApplier
+  ) {}
 
   start() {
     this.findBoardContainerAndObserve();
@@ -23,11 +27,11 @@ export class DynamicUpdater {
 
   private findBoardContainerAndObserve() {
     const boardSelectors = [
-      '[data-testid="board-view"]',
-      '[data-testid="software-board.board"]',
+      '[data-testid="software-board.board-container.board"]',
+      '[data-testid^="software-board.board-container"]',
+      '[data-testid="platform-board-kit.ui.card.card"]',
       '.ghx-columns',
       '#ghx-pool',
-      '#ghx-board-column'
     ];
 
     const findBoard = () => {
@@ -42,16 +46,19 @@ export class DynamicUpdater {
 
     if (this.boardContainer) {
       this.setupMutationObserver();
+      // Сразу применяем лимиты при найденном контейнере
+      this.updateAll();
       console.log('[DynamicUpdater] Контейнер доски найден, наблюдаем за изменениями');
     } else {
-      setTimeout(() => this.findBoardContainerAndObserve(), 1000);
+      // Уменьшена задержка с 1000ms до 200ms
+      setTimeout(() => this.findBoardContainerAndObserve(), 200);
     }
   }
 
   private setupMutationObserver() {
     if (!this.boardContainer) return;
 
-    this.observer = new MutationObserver((mutations) => {
+    this.observer = new MutationObserver(mutations => {
       if (this.isUpdating) return;
 
       const relevantMutation = mutations.some(m => {
@@ -67,14 +74,14 @@ export class DynamicUpdater {
             }
           }
         }
-        
+
         if (m.type === 'attributes') {
           const target = m.target as Element;
           if (this.isCardElement(target) || this.isColumnElement(target)) {
             return true;
           }
         }
-        
+
         return false;
       });
 
@@ -87,7 +94,7 @@ export class DynamicUpdater {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['class', 'data-testid']
+      attributeFilter: ['class', 'data-testid'],
     });
   }
 
@@ -119,19 +126,19 @@ export class DynamicUpdater {
   private updateAll() {
     this.isUpdating = true;
 
-    if (window.JiraHelper?.GroupWipLimitsManager) {
+    if (this.columnLimitsApplier) {
       try {
-        window.JiraHelper.GroupWipLimitsManager.update();
+        this.columnLimitsApplier.update();
       } catch (error) {
-        console.error('[DynamicUpdater] Ошибка обновления GroupWipLimitsManager:', error);
+        console.error('[DynamicUpdater] Ошибка обновления ColumnLimitsApplier:', error);
       }
     }
 
-    if (window.JiraHelper?.wipLimitsManager) {
+    if (this.personLimitsApplier) {
       try {
-        window.JiraHelper.wipLimitsManager.update();
+        this.personLimitsApplier.update();
       } catch (error) {
-        console.error('[DynamicUpdater] Ошибка обновления WipLimitsManager:', error);
+        console.error('[DynamicUpdater] Ошибка обновления PersonLimitsApplier:', error);
       }
     }
 
@@ -153,9 +160,3 @@ export class DynamicUpdater {
     console.log('[DynamicUpdater] Обновление остановлено');
   }
 }
-
-export const dynamicUpdater = DynamicUpdater.getInstance();
-
-// Глобальный экспорт
-if (!window.JiraHelper) window.JiraHelper = {};
-window.JiraHelper.dynamicUpdater = dynamicUpdater;

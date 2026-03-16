@@ -1,25 +1,24 @@
 // src/cloud/features/assignee-highlighter/AssigneeHighlighterApplier.ts
 // Applier для подсветки исполнителей на доске Jira Cloud
 
-import { settingsService } from '../../shared/SettingsService';
-import { assigneeService, Assignee } from '../../shared/AssigneeService';
+import type { SettingsService } from '../../shared/SettingsService';
+import type { AssigneeService, Assignee } from '../../shared/AssigneeService';
 
 export class AssigneeHighlighterApplier {
-  private static instance: AssigneeHighlighterApplier;
   private isEnabled = false;
+
   private observer: MutationObserver | null = null;
+
   private _paintTimeout: number | null = null;
+
   private lastUpdateTime = 0;
+
   private readonly UPDATE_INTERVAL = 500;
 
-  private constructor() {}
-
-  static getInstance(): AssigneeHighlighterApplier {
-    if (!AssigneeHighlighterApplier.instance) {
-      AssigneeHighlighterApplier.instance = new AssigneeHighlighterApplier();
-    }
-    return AssigneeHighlighterApplier.instance;
-  }
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly assigneeService: AssigneeService
+  ) {}
 
   applyAssigneeColors(): void {
     if (!this.isEnabled) return;
@@ -89,10 +88,10 @@ export class AssigneeHighlighterApplier {
 
     this.removeVisualization(card);
 
-    const assignee = assigneeService.getAssigneeForCard(card);
+    const assignee = this.assigneeService.getAssigneeForCard(card);
     if (!assignee) return;
 
-    const settings = settingsService.getSettings();
+    const settings = this.settingsService.getSettings();
     const vizType = settings.assigneeHighlight?.visualizationType || 'stripe';
 
     switch (vizType) {
@@ -247,10 +246,3 @@ export class AssigneeHighlighterApplier {
     this.applyAssigneeColors();
   }
 }
-
-export const assigneeHighlighterApplier = AssigneeHighlighterApplier.getInstance();
-
-// Глобальный экспорт
-if (!window.JiraHelper) window.JiraHelper = {};
-window.JiraHelper.visualizationManager = assigneeHighlighterApplier;
-window.JiraHelper.AssigneeHighlighterApplier = assigneeHighlighterApplier;

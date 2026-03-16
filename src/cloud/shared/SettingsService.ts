@@ -1,21 +1,38 @@
 // src/cloud/shared/SettingsService.ts
 // Сервис настроек для Jira Cloud
 
+/**
+ * Настройки подсветки исполнителей
+ */
 export interface AssigneeHighlightSettings {
+  /** Включена ли подсветка */
   enabled: boolean;
+  /** Тип визуализации: полоса, фон или граница */
   visualizationType: 'stripe' | 'background' | 'border';
+  /** Использовать автоматические цвета */
   autoColors: boolean;
+  /** Кастомные цвета для исполнителей по ID */
   customColors: Record<string, string>;
+  /** Кастомные фоновые цвета для исполнителей по ID */
   customBackgroundColors: Record<string, string>;
+  /** Подсвечивать неназначенные задачи */
   highlightUnassigned: boolean;
+  /** Цвет для неназначенных задач */
   unassignedColor: string;
+  /** Фоновый цвет для неназначенных задач */
   unassignedBackgroundColor: string;
 }
 
+/**
+ * Настройки цветов колонок
+ */
 export interface ColumnColorsSettings {
   enabled: boolean;
 }
 
+/**
+ * Настройки персональных WIP-лимитов
+ */
 export interface WipLimitSettings {
   enabled: boolean;
   limits: Array<{
@@ -25,10 +42,13 @@ export interface WipLimitSettings {
     columnIds: string[];
     columnNames: string[];
     limit: number;
-    color: string; 
+    color: string;
   }>;
 }
 
+/**
+ * Настройки групповых WIP-лимитов колонок
+ */
 export interface ColumnGroupWipLimitSettings {
   enabled: boolean;
   limits: Array<{
@@ -42,6 +62,9 @@ export interface ColumnGroupWipLimitSettings {
   }>;
 }
 
+/**
+ * Полные настройки расширения
+ */
 export interface Settings {
   columnColors: ColumnColorsSettings;
   assigneeHighlight: AssigneeHighlightSettings;
@@ -55,25 +78,29 @@ export interface Settings {
   columnGroupWipLimits: ColumnGroupWipLimitSettings;
 }
 
+/**
+ * Сервис для управления настройками расширения.
+ * Хранит настройки в localStorage и предоставляет доступ к ним.
+ */
 export class SettingsService {
-  private static instance: SettingsService;
   private settings: Settings;
 
   constructor() {
     this.settings = this.loadSettings();
   }
 
-  static getInstance(): SettingsService {
-    if (!SettingsService.instance) {
-      SettingsService.instance = new SettingsService();
-    }
-    return SettingsService.instance;
-  }
-
+  /**
+   * Возвращает текущие настройки
+   * @returns Копия объекта настроек
+   */
   getSettings(): Settings {
     return { ...this.settings };
   }
 
+  /**
+   * Обновляет настройки
+   * @param updates - Частичное обновление настроек
+   */
   updateSettings(updates: Partial<Settings>): void {
     this.settings = {
       ...this.settings,
@@ -95,11 +122,20 @@ export class SettingsService {
     this.saveSettings();
   }
 
+  /**
+   * Включает или выключает цвета колонок
+   * @param enabled - Включить цвета колонок
+   */
   setColumnColorsEnabled(enabled: boolean): void {
     this.settings.columnColors.enabled = enabled;
     this.saveSettings();
   }
 
+  /**
+   * Устанавливает кастомный цвет для исполнителя
+   * @param assigneeId - ID исполнителя
+   * @param color - Цвет в формате HEX или RGBA
+   */
   setAssigneeColor(assigneeId: string, color: string): void {
     if (!this.settings.assigneeHighlight) {
       this.settings.assigneeHighlight = {
@@ -117,6 +153,11 @@ export class SettingsService {
     this.saveSettings();
   }
 
+  /**
+   * Устанавливает цвет для WIP-лимита
+   * @param limitId - ID лимита
+   * @param color - Цвет в формате HEX
+   */
   setWipLimitColor(limitId: string, color: string): void {
     if (this.settings.personalWipLimits?.limits) {
       const index = this.settings.personalWipLimits.limits.findIndex(l => l.id === limitId);
@@ -208,10 +249,6 @@ export class SettingsService {
   }
 }
 
-export const settingsService = SettingsService.getInstance();
-
-// Глобальный экспорт для обратной совместимости
-if (typeof window !== 'undefined') {
-  (window as any).JiraHelper = (window as any).JiraHelper || {};
-  (window as any).JiraHelper.settingsManager = settingsService;
-}
+// Экспорт экземпляра для обратной совместимости (будет удалён после полной миграции)
+// Используйте DI-контейнер вместо прямого импорта
+export const settingsService = new SettingsService();
