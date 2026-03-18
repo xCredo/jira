@@ -27,6 +27,10 @@ import { ColumnGroupLimitPanel } from '../../features/column-limits/ColumnGroupL
 import { AssigneeHighlighterApplier } from '../../features/assignee-highlighter/AssigneeHighlighterApplier';
 import { DynamicUpdater } from '../DynamicUpdater';
 
+// Импортируем регистрации фич
+import { registerInContainer as registerPersonLimits } from '../../features/person-limits/register';
+import { registerInContainer as registerColumnLimits } from '../../features/column-limits/register';
+import { registerInContainer as registerAssigneeHighlighter } from '../../features/assignee-highlighter/register';
 // Создаём глобальный контейнер
 export const cloudContainer = new Container();
 
@@ -109,7 +113,13 @@ export function registerCloudServices(): void {
     factory: c => new DynamicUpdater(c.inject(personLimitsApplierToken), c.inject(columnLimitsApplierToken)),
   });
 
+  // Регистрация фич
+  registerPersonLimits(cloudContainer);
+  registerColumnLimits(cloudContainer);
+  registerAssigneeHighlighter(cloudContainer);
+
   console.log('[DI] Cloud services registered');
+
 }
 
 /**

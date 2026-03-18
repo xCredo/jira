@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { SettingsPanel } from '../PluginSettings/SettingsPanel';
+import styles from './settings.module.css';
 
 export const SettingsButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,14 +60,14 @@ export const SettingsButton: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="jh-settings-popup">
-          <div className="jh-settings-header">
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#172b4d' }}>Jira Helper</span>
-            <button className="jh-settings-close" onClick={() => setIsOpen(false)}>
+        <div className={styles.popup}>
+          <div className={styles.header}>
+            <span className={styles.title}>Jira Helper</span>
+            <button className={styles.closeButton} onClick={() => setIsOpen(false)}>
               ×
             </button>
           </div>
-          <div className="jh-settings-content">
+          <div className={styles.content}>
             <SettingsPanel />
           </div>
         </div>

@@ -6,6 +6,7 @@ import type { ColumnService } from '../../shared/ColumnService';
 import type { AssigneeService } from '../../shared/AssigneeService';
 import type { AvatarIndicatorService } from '../../shared/AvatarIndicatorService';
 import type { IBoardPagePageObject } from '../../shared/BoardPagePageObject';
+import './board.module.css';
 
 export interface WipLimit {
   id: string;

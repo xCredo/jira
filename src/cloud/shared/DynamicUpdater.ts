@@ -4,6 +4,18 @@
 import type { PersonLimitsApplier } from '../features/person-limits/PersonLimitsApplier';
 import type { ColumnLimitsApplier } from '../features/column-limits/ColumnLimitsApplier';
 
+// Событие обновления
+export interface UpdateEvent {
+  type: 'cards-added' | 'cards-removed' | 'columns-changed' | 'full-refresh';
+  timestamp: number;
+}
+
+// Интерфейс подписчика на обновления
+
+export interface UpdateSubscriber {
+  onUpdate(event: UpdateEvent): void;
+}
+
 export class DynamicUpdater {
   private observer: MutationObserver | null = null;
 
@@ -15,10 +27,35 @@ export class DynamicUpdater {
 
   private isUpdating = false;
 
+  // Подписчики на обновления
+  private subscribers = new Set<UpdateSubscriber>();
+
   constructor(
     private readonly personLimitsApplier: PersonLimitsApplier,
     private readonly columnLimitsApplier: ColumnLimitsApplier
   ) {}
+
+  /* Подписаться на обновлени */
+  subscribe(subscriber: UpdateSubscriber): () => void {
+    this.subscribers.add(subscriber);
+    return () => this.subscribers.delete(subscriber);
+  }
+
+  /* Отписаться от обновлений */
+  unsubscribe(subscriber: UpdateSubscriber): void {
+    this.subscribers.delete(subscriber);
+  }
+
+  /* Уведомить всех подписчиков об обновлении */
+  private notifySubscribers(event: UpdateEvent): void {
+    this.subscribers.forEach(subscriber => {
+      try {
+        subscriber.onUpdate(event);
+      } catch (error) {
+        console.error('[DynamicUpdater] Ошибка уведомления подписчика:', error);
+      }
+    });
+  }
 
   start() {
     this.findBoardContainerAndObserve();
@@ -125,6 +162,15 @@ export class DynamicUpdater {
 
   private updateAll() {
     this.isUpdating = true;
+
+    // Создаём событие обновления
+    const event: UpdateEvent = {
+      type: 'full-refresh',
+      timestamp: Date.now(),
+    };
+
+    // Уведомляем подписчиков ДО обновления appliers
+    this.notifySubscribers(event);
 
     if (this.columnLimitsApplier) {
       try {

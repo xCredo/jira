@@ -7,6 +7,8 @@ import { settingsServiceToken, assigneeServiceToken, columnServiceToken } from '
 import type { Settings } from '../../shared/SettingsService';
 import type { Assignee } from '../../shared/AssigneeService';
 import type { ColumnInfo } from '../../shared/ColumnService';
+import settingsStyles from '../../ui/settings.module.css';
+import styles from './settings.module.css';
 
 interface PersonLimitRow {
   id: string;

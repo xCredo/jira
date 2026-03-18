@@ -3,3 +3,4 @@
 
 export { PersonLimitsApplier, type WipLimit } from './PersonLimitsApplier';
 export { PersonLimitsSettings } from './PersonLimitsSettings';
+export { PersonLimitsFeatureSettings, type PersonLimit, type PersonLimitsFeatureState } from './PersonLimitsFeatureSettings';

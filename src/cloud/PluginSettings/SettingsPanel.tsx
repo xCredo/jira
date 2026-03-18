@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { PersonLimitsSettings } from '../features/person-limits';
 import { ColumnLimitsSettings } from '../features/column-limits';
 import { AssigneeHighlighterSettings } from '../features/assignee-highlighter';
+import styles from '../ui/settings.module.css';
 
 type TabType = 'assignee-highlighter' | 'person-limits' | 'column-limits';
 
@@ -26,20 +27,20 @@ export const SettingsPanel: React.FC = () => {
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || AssigneeHighlighterSettings;
 
   return (
-    <div className="jh-settings-panel">
-      <div className="jh-settings-tabs">
+    <div className={styles.panel}>
+      <div className={styles.tabs}>
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={activeTab === tab.id ? 'jh-tab-active' : 'jh-tab'}
+            className={activeTab === tab.id ? styles.tabActive : styles.tab}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="jh-settings-tab-content">
+      <div className={styles.content}>
         <ActiveComponent />
       </div>
     </div>

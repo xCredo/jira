@@ -28,3 +28,14 @@ export const assigneeHighlighterApplierToken = new Token<
   import('../../features/assignee-highlighter/AssigneeHighlighterApplier').AssigneeHighlighterApplier
 >('AssigneeHighlighterApplier');
 export const dynamicUpdaterToken = new Token<import('../DynamicUpdater').DynamicUpdater>('DynamicUpdater');
+
+// Feature Settings
+export const personLimitsFeatureSettingsToken = new Token<
+  import('../../features/person-limits/PersonLimitsFeatureSettings').PersonLimitsFeatureSettings
+>('PersonLimitsFeatureSettings');
+export const columnLimitsFeatureSettingsToken = new Token<
+  import('../../features/column-limits/ColumnLimitsFeatureSettings').ColumnLimitsFeatureSettings
+>('ColumnLimitsFeatureSettings');
+export const assigneeHighlighterFeatureSettingsToken = new Token<
+  import('../../features/assignee-highlighter/AssigneeHighlighterFeatureSettings').AssigneeHighlighterFeatureSettings
+>('AssigneeHighlighterFeatureSettings');

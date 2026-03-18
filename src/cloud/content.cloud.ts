@@ -1,7 +1,5 @@
 // src/cloud/content.cloud.ts
 // Точка входа для Jira Cloud
-import './styles.css';
-
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import {
