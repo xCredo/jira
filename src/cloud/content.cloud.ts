@@ -78,8 +78,8 @@ export function initializeCloudExtension(): void {
   const settingsService = cloudContainer.inject(settingsServiceToken);
 
   // Инициализируем appliers
-  personLimitsApplier.init();
-  columnLimitsApplier.init();
+  personLimitsApplier.init(dynamicUpdater);
+  columnLimitsApplier.init(dynamicUpdater);
 
   // Запускаем DynamicUpdater сразу
   dynamicUpdater.start();

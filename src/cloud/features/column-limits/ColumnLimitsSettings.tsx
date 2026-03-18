@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { cloudContainer } from '../../shared/di';
 import { settingsServiceToken, columnServiceToken } from '../../shared/di/tokens';
 import type { ColumnInfo } from '../../shared/ColumnService';
+import settingsStyles from '../../ui/settings.module.css';
 
 interface ColumnGroupLimitRow {
   id: string;
@@ -103,6 +104,11 @@ export const ColumnLimitsSettings: React.FC = () => {
     });
   };
 
+  const handleEditLimit = (id: string) => {
+    // Логика редактирования - можно реализовать позже
+    console.log('Редактирование группы:', id);
+  };
+
   const handleUpdateLimit = (id: string, field: keyof ColumnGroupLimitRow, value: any) => {
     const settingsService = cloudContainer.inject(settingsServiceToken);
     const updatedLimits = limits.map(l => {
@@ -128,7 +134,7 @@ export const ColumnLimitsSettings: React.FC = () => {
   };
 
   return (
-    <div className="column-limits-settings" style={{ padding: '20px' }}>
+    <div className={settingsStyles.panel} style={{ padding: '20px' }}>
       <h2>Групповые WIP-лимиты</h2>
 
       <div style={{ marginBottom: '20px' }}>
@@ -222,69 +228,96 @@ export const ColumnLimitsSettings: React.FC = () => {
             {limits.length === 0 ? (
               <p>Группы не настроены</p>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: '8px' }}>Название</th>
-                    <th style={{ textAlign: 'left', padding: '8px' }}>Колонки</th>
-                    <th style={{ textAlign: 'left', padding: '8px' }}>Лимит</th>
-                    <th style={{ textAlign: 'left', padding: '8px' }}>Цвета</th>
-                    <th style={{ textAlign: 'left', padding: '8px' }}>Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {limits.map(limit => (
-                    <tr key={limit.id} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px' }}>{limit.name}</td>
-                      <td style={{ padding: '8px' }}>{limit.columnNames.join(', ')}</td>
-                      <td style={{ padding: '8px' }}>
-                        <input
-                          type="number"
-                          value={limit.limit}
-                          onChange={e => handleUpdateLimit(limit.id, 'limit', parseInt(e.target.value) || 0)}
-                          min={1}
-                          style={{ width: '60px' }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <div>
-                            <label style={{ fontSize: '10px' }}>Базовый:</label>
-                            <input
-                              type="color"
-                              value={limit.baseColor}
-                              onChange={e => handleUpdateLimit(limit.id, 'baseColor', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '10px' }}>Превышение:</label>
-                            <input
-                              type="color"
-                              value={limit.warningColor || '#FF0000'}
-                              onChange={e => handleUpdateLimit(limit.id, 'warningColor', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '8px' }}>
-                        <button
-                          onClick={() => handleDeleteLimit(limit.id)}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: '#de350b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Удалить
-                        </button>
-                      </td>
+              <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+                <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Название</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Колонки</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Лимит</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Цвета</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Действия</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {limits.map(limit => (
+                      <tr key={limit.id} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '8px' }}>{limit.name}</td>
+                        <td style={{ padding: '8px' }}>{limit.columnNames.join(', ')}</td>
+                        <td style={{ padding: '8px' }}>
+                          <input
+                            type="number"
+                            value={limit.limit === 0 ? '' : limit.limit}
+                            onChange={e => {
+                              const val = e.target.value;
+                              if (val === '') {
+                                handleUpdateLimit(limit.id, 'limit', 0);
+                              } else {
+                                const num = parseInt(val);
+                                if (!isNaN(num) && num > 0) {
+                                  handleUpdateLimit(limit.id, 'limit', num);
+                                }
+                              }
+                            }}
+                            min={1}
+                            style={{ width: '60px' }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <div>
+                              <label style={{ fontSize: '10px' }}>Базовый:</label>
+                              <input
+                                type="color"
+                                value={limit.baseColor}
+                                onChange={e => handleUpdateLimit(limit.id, 'baseColor', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '10px' }}>Превышение:</label>
+                              <input
+                                type="color"
+                                value={limit.warningColor || '#FF0000'}
+                                onChange={e => handleUpdateLimit(limit.id, 'warningColor', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '8px' }}>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => handleEditLimit(limit.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                background: 'white',
+                                cursor: 'pointer',
+                              }}
+                              title="Редактировать"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLimit(limit.id)}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#de350b',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              ❌
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>

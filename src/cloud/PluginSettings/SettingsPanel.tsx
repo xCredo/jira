@@ -28,7 +28,19 @@ export const SettingsPanel: React.FC = () => {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.tabs}>
+      <div 
+        className={styles.tabs}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          backgroundColor: '#ffffff',
+          padding: '12px 16px',
+          borderBottom: '1px solid #e1e4e8',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          marginBottom: '16px',
+        }}
+      >
         {tabs.map(tab => (
           <button
             key={tab.id}

@@ -1,6 +1,7 @@
 // src/cloud/features/person-limits/PersonLimitsApplier.ts
 // Applier для персональных WIP-лимитов в Jira Cloud
 
+import type { DynamicUpdater, UpdateEvent, UpdateSubscriber } from '../../shared/DynamicUpdater';
 import type { SettingsService } from '../../shared/SettingsService';
 import type { ColumnService } from '../../shared/ColumnService';
 import type { AssigneeService } from '../../shared/AssigneeService';
@@ -18,10 +19,12 @@ export interface WipLimit {
   color?: string;
 }
 
-export class PersonLimitsApplier {
+export class PersonLimitsApplier implements UpdateSubscriber {
   private enabled = false;
 
   private limits: WipLimit[] = [];
+
+  private unsubscribe: (() => void) | null = null;
 
   constructor(
     private readonly settingsService: SettingsService,
@@ -31,9 +34,19 @@ export class PersonLimitsApplier {
     private readonly boardPage: IBoardPagePageObject
   ) {}
 
-  init() {
+  init(dynamicUpdater?: DynamicUpdater) {
     this.loadSettings();
+    
+    // Подписываемся на обновления DynamicUpdater
+    if (dynamicUpdater) {
+      this.unsubscribe = dynamicUpdater.subscribe(this);
+    }
+    
     return this;
+  }
+
+  onUpdate(event: UpdateEvent): void {
+    this.update();
   }
 
   private loadSettings() {
