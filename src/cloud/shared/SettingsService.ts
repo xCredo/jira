@@ -1,5 +1,8 @@
-// src/cloud/shared/SettingsService.ts
-// Сервис настроек для Jira Cloud
+// src/cloud/shared/REMAKE_SettingsService.ts
+// Сервис настроек для Jira Cloud с поддержкой Jira Board Properties
+
+import type { IBoardPagePageObject } from './BoardPagePageObject.tsx';
+import { SettingsStorage, SETTINGS_KEYS } from './SettingsStorage';
 
 /**
  * Настройки подсветки исполнителей
@@ -80,13 +83,34 @@ export interface Settings {
 
 /**
  * Сервис для управления настройками расширения.
- * Хранит настройки в localStorage и предоставляет доступ к ним.
+ * Хранит настройки в Jira Board Properties с fallback в localStorage.
  */
 export class SettingsService {
   private settings: Settings;
 
-  constructor() {
-    this.settings = this.loadSettings();
+  private readonly jiraStorage: SettingsStorage | null;
+
+  private useJiraApi = false;
+
+  constructor(boardPage: IBoardPagePageObject) {
+    this.settings = this.getDefaultSettings();
+    this.jiraStorage = new SettingsStorage(boardPage);
+
+    // Проверяем доступность Jira API
+    this.init();
+  }
+
+  private async init(): Promise<void> {
+    // Пробуем загрузить из Jira API
+    this.useJiraApi = (await this.jiraStorage?.isAvailable()) ?? false;
+
+    if (this.useJiraApi) {
+      console.log('[SettingsService] Используем Jira Board Properties API');
+      await this.loadFromJira();
+    } else {
+      console.log('[SettingsService] Jira API недоступен, используем localStorage');
+      this.settings = this.loadFromLocalStorage();
+    }
   }
 
   /**
@@ -101,7 +125,7 @@ export class SettingsService {
    * Обновляет настройки
    * @param updates - Частичное обновление настроек
    */
-  updateSettings(updates: Partial<Settings>): void {
+  async updateSettings(updates: Partial<Settings>): Promise<void> {
     this.settings = {
       ...this.settings,
       ...updates,
@@ -119,16 +143,16 @@ export class SettingsService {
       },
     };
 
-    this.saveSettings();
+    await this.saveSettings();
   }
 
   /**
    * Включает или выключает цвета колонок
    * @param enabled - Включить цвета колонок
    */
-  setColumnColorsEnabled(enabled: boolean): void {
+  async setColumnColorsEnabled(enabled: boolean): Promise<void> {
     this.settings.columnColors.enabled = enabled;
-    this.saveSettings();
+    await this.saveSettings();
   }
 
   /**
@@ -136,7 +160,7 @@ export class SettingsService {
    * @param assigneeId - ID исполнителя
    * @param color - Цвет в формате HEX или RGBA
    */
-  setAssigneeColor(assigneeId: string, color: string): void {
+  async setAssigneeColor(assigneeId: string, color: string): Promise<void> {
     if (!this.settings.assigneeHighlight) {
       this.settings.assigneeHighlight = {
         enabled: false,
@@ -150,7 +174,7 @@ export class SettingsService {
       };
     }
     this.settings.assigneeHighlight.customColors[assigneeId] = color;
-    this.saveSettings();
+    await this.saveSettings();
   }
 
   /**
@@ -158,17 +182,91 @@ export class SettingsService {
    * @param limitId - ID лимита
    * @param color - Цвет в формате HEX
    */
-  setWipLimitColor(limitId: string, color: string): void {
+  async setWipLimitColor(limitId: string, color: string): Promise<void> {
     if (this.settings.personalWipLimits?.limits) {
       const index = this.settings.personalWipLimits.limits.findIndex(l => l.id === limitId);
       if (index !== -1) {
         this.settings.personalWipLimits.limits[index].color = color;
-        this.saveSettings();
+        await this.saveSettings();
       }
     }
   }
 
-  private loadSettings(): Settings {
+  /**
+   * Сохраняет настройки
+   */
+  async saveSettings(): Promise<void> {
+    // Сохраняем в localStorage всегда (fallback)
+    this.saveToLocalStorage();
+
+    // Пробуем сохранить в Jira API
+    if (this.useJiraApi && this.jiraStorage) {
+      try {
+        await this.jiraStorage.set(SETTINGS_KEYS.PERSON_LIMITS, {
+          enabled: this.settings.personalWipLimits.enabled,
+          limits: this.settings.personalWipLimits.limits,
+        });
+
+        await this.jiraStorage.set(SETTINGS_KEYS.COLUMN_LIMITS, {
+          enabled: this.settings.columnGroupWipLimits.enabled,
+          limits: this.settings.columnGroupWipLimits.limits,
+        });
+
+        await this.jiraStorage.set(SETTINGS_KEYS.ASSIGNEE_HIGHLIGHTER, {
+          enabled: this.settings.assigneeHighlight.enabled,
+          visualizationType: this.settings.assigneeHighlight.visualizationType,
+          autoColors: this.settings.assigneeHighlight.autoColors,
+          customColors: this.settings.assigneeHighlight.customColors,
+          customBackgroundColors: this.settings.assigneeHighlight.customBackgroundColors,
+          highlightUnassigned: this.settings.assigneeHighlight.highlightUnassigned,
+          unassignedColor: this.settings.assigneeHighlight.unassignedColor,
+          unassignedBackgroundColor: this.settings.assigneeHighlight.unassignedBackgroundColor,
+        });
+
+        console.log('[SettingsService] Настройки сохранены в Jira Board Properties');
+      } catch (error) {
+        console.error('[SettingsService] Ошибка сохранения в Jira API:', error);
+      }
+    }
+  }
+
+  /**
+   * Загружает настройки из Jira Board Properties
+   */
+  private async loadFromJira(): Promise<void> {
+    if (!this.jiraStorage) return;
+
+    try {
+      // Загружаем персональные лимиты
+      const personLimits = await this.jiraStorage.get<WipLimitSettings>(SETTINGS_KEYS.PERSON_LIMITS);
+      if (personLimits) {
+        this.settings.personalWipLimits = personLimits;
+      }
+
+      // Загружаем групповые лимиты
+      const columnLimits = await this.jiraStorage.get<ColumnGroupWipLimitSettings>(SETTINGS_KEYS.COLUMN_LIMITS);
+      if (columnLimits) {
+        this.settings.columnGroupWipLimits = columnLimits;
+      }
+
+      // Загружаем настройки подсветки
+      const assigneeHighlight = await this.jiraStorage.get<AssigneeHighlightSettings>(SETTINGS_KEYS.ASSIGNEE_HIGHLIGHTER);
+      if (assigneeHighlight) {
+        this.settings.assigneeHighlight = assigneeHighlight;
+      }
+
+      console.log('[SettingsService] Настройки загружены из Jira Board Properties');
+    } catch (error) {
+      console.error('[SettingsService] Ошибка загрузки из Jira API:', error);
+      // Fallback на localStorage
+      this.settings = this.loadFromLocalStorage();
+    }
+  }
+
+  /**
+   * Загружает настройки из localStorage
+   */
+  private loadFromLocalStorage(): Settings {
     try {
       const saved = localStorage.getItem('jira-helper-settings');
       if (saved) {
@@ -202,10 +300,21 @@ export class SettingsService {
         };
       }
     } catch (error) {
-      console.error('[SettingsService] Ошибка загрузки настроек:', error);
+      console.error('[SettingsService] Ошибка загрузки из localStorage:', error);
     }
 
     return this.getDefaultSettings();
+  }
+
+  /**
+   * Сохраняет настройки в localStorage
+   */
+  private saveToLocalStorage(): void {
+    try {
+      localStorage.setItem('jira-helper-settings', JSON.stringify(this.settings));
+    } catch (error) {
+      console.error('[SettingsService] Ошибка сохранения в localStorage:', error);
+    }
   }
 
   private getDefaultSettings(): Settings {
@@ -239,16 +348,4 @@ export class SettingsService {
       },
     };
   }
-
-  public saveSettings(): void {
-    try {
-      localStorage.setItem('jira-helper-settings', JSON.stringify(this.settings));
-    } catch (error) {
-      console.error('[SettingsService] Ошибка сохранения настроек:', error);
-    }
-  }
 }
-
-// Экспорт экземпляра для обратной совместимости (будет удалён после полной миграции)
-// Используйте DI-контейнер вместо прямого импорта
-export const settingsService = new SettingsService();

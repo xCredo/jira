@@ -4,18 +4,6 @@
 import type { PersonLimitsApplier } from '../features/person-limits/PersonLimitsApplier';
 import type { ColumnLimitsApplier } from '../features/column-limits/ColumnLimitsApplier';
 
-// Событие обновления
-export interface UpdateEvent {
-  type: 'cards-added' | 'cards-removed' | 'columns-changed' | 'full-refresh';
-  timestamp: number;
-}
-
-// Интерфейс подписчика на обновления
-
-export interface UpdateSubscriber {
-  onUpdate(event: UpdateEvent): void;
-}
-
 export class DynamicUpdater {
   private observer: MutationObserver | null = null;
 
@@ -34,28 +22,6 @@ export class DynamicUpdater {
     private readonly personLimitsApplier: PersonLimitsApplier,
     private readonly columnLimitsApplier: ColumnLimitsApplier
   ) {}
-
-  /* Подписаться на обновлени */
-  subscribe(subscriber: UpdateSubscriber): () => void {
-    this.subscribers.add(subscriber);
-    return () => this.subscribers.delete(subscriber);
-  }
-
-  /* Отписаться от обновлений */
-  unsubscribe(subscriber: UpdateSubscriber): void {
-    this.subscribers.delete(subscriber);
-  }
-
-  /* Уведомить всех подписчиков об обновлении */
-  private notifySubscribers(event: UpdateEvent): void {
-    this.subscribers.forEach(subscriber => {
-      try {
-        subscriber.onUpdate(event);
-      } catch (error) {
-        console.error('[DynamicUpdater] Ошибка уведомления подписчика:', error);
-      }
-    });
-  }
 
   start() {
     this.findBoardContainerAndObserve();
@@ -172,21 +138,8 @@ export class DynamicUpdater {
     // Уведомляем подписчиков ДО обновления appliers
     this.notifySubscribers(event);
 
-    if (this.columnLimitsApplier) {
-      try {
-        this.columnLimitsApplier.update();
-      } catch (error) {
-        console.error('[DynamicUpdater] Ошибка обновления ColumnLimitsApplier:', error);
-      }
-    }
-
-    if (this.personLimitsApplier) {
-      try {
-        this.personLimitsApplier.update();
-      } catch (error) {
-        console.error('[DynamicUpdater] Ошибка обновления PersonLimitsApplier:', error);
-      }
-    }
+    // Уведомляем всех подписчиков (вместо прямых вызовов applier-ов)
+    this.notifySubscribers();
 
     setTimeout(() => {
       this.isUpdating = false;

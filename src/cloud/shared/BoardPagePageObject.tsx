@@ -76,6 +76,7 @@ export interface IBoardPagePageObject {
   getColumnOfIssue(issueId: string): string;
   getHtml(): string;
   getAllCloudCards(): HTMLElement[];
+  getBoardId(): number | null;
 }
 
 export const BoardPagePageObject: IBoardPagePageObject = {
@@ -146,5 +147,57 @@ export const BoardPagePageObject: IBoardPagePageObject = {
 
   getAllCloudCards(): HTMLElement[] {
     return Array.from(document.querySelectorAll<HTMLElement>(this.selectors.issueCardCloud));
+  },
+
+  /**
+   * Получает ID доски из URL или из DOM
+   * @returns ID доски или null, если не удалось определить
+   */
+  getBoardId(): number | null {
+    // Способ 1: из URL
+    // URL может быть: /boards/1, /boards/1/view, /jira/software/c/projects/PROJ/boards/1
+    const urlMatch = window.location.pathname.match(/\/boards\/(\d+)/);
+    if (urlMatch) {
+      const id = parseInt(urlMatch[1], 10);
+      console.log('[BoardPagePageObject] Board ID из URL:', id);
+      return id;
+    }
+
+    // Способ 2: из DOM (запасной)
+    // Ищем элемент с data-board-id или data-testid содержащим board
+    const boardElement =
+      document.querySelector('[data-board-id]') ||
+      document.querySelector('[data-testid*="board"]:not([data-testid*="column"]):not([data-testid*="card"])');
+
+    if (boardElement) {
+      const idAttr = boardElement.getAttribute('data-board-id');
+      if (idAttr) {
+        const id = parseInt(idAttr, 10);
+        console.log('[BoardPagePageObject] Board ID из DOM:', id);
+        return id;
+      }
+
+      // Пробуем получить из data-testid
+      const testId = boardElement.getAttribute('data-testid');
+      const boardIdMatch = testId?.match(/board[_-]?(\d+)/i);
+      if (boardIdMatch) {
+        const id = parseInt(boardIdMatch[1], 10);
+        console.log('[BoardPagePageObject] Board ID из data-testid:', id);
+        return id;
+      }
+    }
+
+    // Способ 3: из мета-тегов
+    const metaBoard = document.querySelector('meta[name="ajs-board-id"]');
+    if (metaBoard) {
+      const id = parseInt(metaBoard.getAttribute('content') || '0', 10);
+      if (id > 0) {
+        console.log('[BoardPagePageObject] Board ID из meta:', id);
+        return id;
+      }
+    }
+
+    console.warn('[BoardPagePageObject] Не удалось определить ID доски');
+    return null;
   },
 };

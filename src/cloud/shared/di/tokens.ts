@@ -10,6 +10,7 @@ export const assigneeServiceToken = new Token<import('../AssigneeService').Assig
 export const avatarIndicatorServiceToken = new Token<import('../AvatarIndicatorService').AvatarIndicatorService>(
   'AvatarIndicatorService'
 );
+export const settingsStorageToken = new Token<import('../SettingsStorage').SettingsStorage>('SettingsStorage');
 export const boardPagePageObjectToken = new Token<import('../BoardPagePageObject').IBoardPagePageObject>(
   'BoardPagePageObject'
 );

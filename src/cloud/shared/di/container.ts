@@ -44,10 +44,10 @@ export function registerCloudServices(): void {
     value: BoardPagePageObject,
   });
 
-  // SettingsService - без зависимостей
+  // SettingsService - зависит от BoardPagePageObject (для получения boardId)
   cloudContainer.register({
     token: settingsServiceToken,
-    factory: () => new SettingsService(),
+    factory: c => new SettingsService(c.inject(boardPagePageObjectToken)),
   });
 
   // ColumnService - зависит от BoardPagePageObject
@@ -74,43 +74,59 @@ export function registerCloudServices(): void {
     factory: () => new ColumnGroupLimitPanel(),
   });
 
-  // PersonLimitsApplier - 5 зависимостей
+  // PersonLimitsApplier - 5 зависимостей + DynamicUpdater
   cloudContainer.register({
     token: personLimitsApplierToken,
-    factory: c =>
-      new PersonLimitsApplier(
+    factory: c => {
+      const updater = c.inject(dynamicUpdaterToken);
+      const applier = new PersonLimitsApplier(
         c.inject(settingsServiceToken),
         c.inject(columnServiceToken),
         c.inject(assigneeServiceToken),
         c.inject(avatarIndicatorServiceToken),
         c.inject(boardPagePageObjectToken)
-      ),
+      );
+      // Подписываемся на обновления DynamicUpdater
+      updater.onUpdate(() => applier.update());
+      return applier;
+    },
   });
 
-  // ColumnLimitsApplier - 6 зависимостей
+  // ColumnLimitsApplier - 6 зависимостей + DynamicUpdater
   cloudContainer.register({
     token: columnLimitsApplierToken,
-    factory: c =>
-      new ColumnLimitsApplier(
+    factory: c => {
+      const updater = c.inject(dynamicUpdaterToken);
+      const applier = new ColumnLimitsApplier(
         c.inject(settingsServiceToken),
         c.inject(columnServiceToken),
         c.inject(assigneeServiceToken),
         c.inject(avatarIndicatorServiceToken),
         c.inject(columnGroupLimitPanelToken),
         c.inject(boardPagePageObjectToken)
-      ),
+      );
+      // Подписываемся на обновления DynamicUpdater
+      updater.onUpdate(() => applier.update());
+      return applier;
+    },
   });
 
-  // AssigneeHighlighterApplier - 2 зависимости
+  // AssigneeHighlighterApplier - 2 зависимости + DynamicUpdater
   cloudContainer.register({
     token: assigneeHighlighterApplierToken,
-    factory: c => new AssigneeHighlighterApplier(c.inject(settingsServiceToken), c.inject(assigneeServiceToken)),
+    factory: c => {
+      const updater = c.inject(dynamicUpdaterToken);
+      const applier = new AssigneeHighlighterApplier(c.inject(settingsServiceToken), c.inject(assigneeServiceToken));
+      // Подписываемся на обновления DynamicUpdater
+      updater.onUpdate(() => applier.updateVisualization());
+      return applier;
+    },
   });
 
-  // DynamicUpdater - 2 зависимости
+  // DynamicUpdater - без зависимостей (singleton)
   cloudContainer.register({
     token: dynamicUpdaterToken,
-    factory: c => new DynamicUpdater(c.inject(personLimitsApplierToken), c.inject(columnLimitsApplierToken)),
+    factory: () => new DynamicUpdater(),
   });
 
   // Регистрация фич
