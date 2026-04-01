@@ -1,21 +1,20 @@
 // src/cloud/shared/di/container.ts
-// DI-контейнер для cloud-версии расширения
+// DI-контейнер для cloud-версии расширения (добавлена подписка на onSettingsChanged)
 
 import { Container } from 'dioma';
 import {
-  settingsServiceToken,
-  columnServiceToken,
-  assigneeServiceToken,
-  avatarIndicatorServiceToken,
-  boardPagePageObjectToken,
-  personLimitsApplierToken,
-  columnLimitsApplierToken,
-  columnGroupLimitPanelToken,
-  assigneeHighlighterApplierToken,
-  dynamicUpdaterToken,
+ settingsServiceToken,
+ columnServiceToken,
+ assigneeServiceToken,
+ avatarIndicatorServiceToken,
+ boardPagePageObjectToken,
+ personLimitsApplierToken,
+ columnLimitsApplierToken,
+ columnGroupLimitPanelToken,
+ assigneeHighlighterApplierToken,
+ dynamicUpdaterToken,
 } from './tokens';
 
-// Импортируем классы
 import { SettingsService } from '../SettingsService';
 import { ColumnService } from '../ColumnService';
 import { AssigneeService } from '../AssigneeService';
@@ -27,120 +26,122 @@ import { ColumnGroupLimitPanel } from '../../features/column-limits/ColumnGroupL
 import { AssigneeHighlighterApplier } from '../../features/assignee-highlighter/AssigneeHighlighterApplier';
 import { DynamicUpdater } from '../DynamicUpdater';
 
-// Импортируем регистрации фич
 import { registerInContainer as registerPersonLimits } from '../../features/person-limits/register';
 import { registerInContainer as registerColumnLimits } from '../../features/column-limits/register';
 import { registerInContainer as registerAssigneeHighlighter } from '../../features/assignee-highlighter/register';
-// Создаём глобальный контейнер
+
 export const cloudContainer = new Container();
 
-/**
- * Регистрирует все сервисы и applier-ы в DI-контейнере
- */
 export function registerCloudServices(): void {
-  // BoardPagePageObject - статический объект
-  cloudContainer.register({
-    token: boardPagePageObjectToken,
-    value: BoardPagePageObject,
-  });
+ cloudContainer.register({
+ token: boardPagePageObjectToken,
+ value: BoardPagePageObject,
+ });
 
-  // SettingsService - зависит от BoardPagePageObject (для получения boardId)
-  cloudContainer.register({
-    token: settingsServiceToken,
-    factory: c => new SettingsService(c.inject(boardPagePageObjectToken)),
-  });
+ cloudContainer.register({
+ token: settingsServiceToken,
+ value: new SettingsService(cloudContainer.inject(boardPagePageObjectToken)),
+ });
 
-  // ColumnService - зависит от BoardPagePageObject
-  cloudContainer.register({
-    token: columnServiceToken,
-    factory: c => new ColumnService(c.inject(boardPagePageObjectToken)),
-  });
+ cloudContainer.register({
+ token: columnServiceToken,
+ value: new ColumnService(cloudContainer.inject(boardPagePageObjectToken)),
+ });
 
-  // AssigneeService - зависит от SettingsService
-  cloudContainer.register({
-    token: assigneeServiceToken,
-    factory: c => new AssigneeService(c.inject(settingsServiceToken)),
-  });
+ cloudContainer.register({
+ token: assigneeServiceToken,
+ value: new AssigneeService(cloudContainer.inject(settingsServiceToken)),
+ });
 
-  // AvatarIndicatorService - зависит от AssigneeService
-  cloudContainer.register({
-    token: avatarIndicatorServiceToken,
-    factory: c => new AvatarIndicatorService(c.inject(assigneeServiceToken)),
-  });
+ cloudContainer.register({
+ token: avatarIndicatorServiceToken,
+ value: new AvatarIndicatorService(cloudContainer.inject(assigneeServiceToken)),
+ });
 
-  // ColumnGroupLimitPanel - без зависимостей
-  cloudContainer.register({
-    token: columnGroupLimitPanelToken,
-    factory: () => new ColumnGroupLimitPanel(),
-  });
+ cloudContainer.register({
+ token: columnGroupLimitPanelToken,
+ value: new ColumnGroupLimitPanel(),
+ });
 
-  // PersonLimitsApplier - 5 зависимостей + DynamicUpdater
-  cloudContainer.register({
-    token: personLimitsApplierToken,
-    factory: c => {
-      const updater = c.inject(dynamicUpdaterToken);
-      const applier = new PersonLimitsApplier(
-        c.inject(settingsServiceToken),
-        c.inject(columnServiceToken),
-        c.inject(assigneeServiceToken),
-        c.inject(avatarIndicatorServiceToken),
-        c.inject(boardPagePageObjectToken)
-      );
-      // Подписываемся на обновления DynamicUpdater
-      updater.onUpdate(() => applier.update());
-      return applier;
-    },
-  });
+ cloudContainer.register({
+ token: dynamicUpdaterToken,
+ value: new DynamicUpdater(),
+ });
 
-  // ColumnLimitsApplier - 6 зависимостей + DynamicUpdater
-  cloudContainer.register({
-    token: columnLimitsApplierToken,
-    factory: c => {
-      const updater = c.inject(dynamicUpdaterToken);
-      const applier = new ColumnLimitsApplier(
-        c.inject(settingsServiceToken),
-        c.inject(columnServiceToken),
-        c.inject(assigneeServiceToken),
-        c.inject(avatarIndicatorServiceToken),
-        c.inject(columnGroupLimitPanelToken),
-        c.inject(boardPagePageObjectToken)
-      );
-      // Подписываемся на обновления DynamicUpdater
-      updater.onUpdate(() => applier.update());
-      return applier;
-    },
-  });
+ cloudContainer.register({
+ token: personLimitsApplierToken,
+ value: (() => {
+ const settingsService = cloudContainer.inject(settingsServiceToken);
+ const updater = cloudContainer.inject(dynamicUpdaterToken);
+ const applier = new PersonLimitsApplier(
+ settingsService,
+ cloudContainer.inject(columnServiceToken),
+ cloudContainer.inject(assigneeServiceToken),
+ cloudContainer.inject(avatarIndicatorServiceToken),
+ cloudContainer.inject(boardPagePageObjectToken)
+ );
+ // Подписка на DynamicUpdater
+ updater.onUpdate(() => applier.update());
+ // Подписка на изменение настроек
+ settingsService.onSettingsChanged(() => {
+ console.log('[SettingsService] Изменение настроек - обновляем PersonLimitsApplier');
+ applier.update();
+ });
+ return applier;
+ })(),
+ });
 
-  // AssigneeHighlighterApplier - 2 зависимости + DynamicUpdater
-  cloudContainer.register({
-    token: assigneeHighlighterApplierToken,
-    factory: c => {
-      const updater = c.inject(dynamicUpdaterToken);
-      const applier = new AssigneeHighlighterApplier(c.inject(settingsServiceToken), c.inject(assigneeServiceToken));
-      // Подписываемся на обновления DynamicUpdater
-      updater.onUpdate(() => applier.updateVisualization());
-      return applier;
-    },
-  });
+ cloudContainer.register({
+ token: columnLimitsApplierToken,
+ value: (() => {
+ const settingsService = cloudContainer.inject(settingsServiceToken);
+ const updater = cloudContainer.inject(dynamicUpdaterToken);
+ const applier = new ColumnLimitsApplier(
+ settingsService,
+ cloudContainer.inject(columnServiceToken),
+ cloudContainer.inject(assigneeServiceToken),
+ cloudContainer.inject(avatarIndicatorServiceToken),
+ cloudContainer.inject(columnGroupLimitPanelToken),
+ cloudContainer.inject(boardPagePageObjectToken)
+ );
+ // Подписка на DynamicUpdater
+ updater.onUpdate(() => applier.update());
+ // Подписка на изменение настроек
+ settingsService.onSettingsChanged(() => {
+ console.log('[SettingsService] Изменение настроек - обновляем ColumnLimitsApplier');
+ applier.update();
+ });
+ return applier;
+ })(),
+ });
 
-  // DynamicUpdater - без зависимостей (singleton)
-  cloudContainer.register({
-    token: dynamicUpdaterToken,
-    factory: () => new DynamicUpdater(),
-  });
+ cloudContainer.register({
+ token: assigneeHighlighterApplierToken,
+ value: (() => {
+ const settingsService = cloudContainer.inject(settingsServiceToken);
+ const updater = cloudContainer.inject(dynamicUpdaterToken);
+ const applier = new AssigneeHighlighterApplier(
+ settingsService,
+ cloudContainer.inject(assigneeServiceToken)
+ );
+ // Подписка на DynamicUpdater
+ updater.onUpdate(() => applier.updateVisualization());
+ // Подписка на изменение настроек
+ settingsService.onSettingsChanged(() => {
+ console.log('[SettingsService] Изменение настроек - обновляем AssigneeHighlighterApplier');
+ applier.updateVisualization();
+ });
+ return applier;
+ })(),
+ });
 
-  // Регистрация фич
-  registerPersonLimits(cloudContainer);
-  registerColumnLimits(cloudContainer);
-  registerAssigneeHighlighter(cloudContainer);
+ registerPersonLimits(cloudContainer);
+ registerColumnLimits(cloudContainer);
+ registerAssigneeHighlighter(cloudContainer);
 
-  console.log('[DI] Cloud services registered');
-
+ console.log('[DI] Cloud services registered');
 }
 
-/**
- * Получает сервис по токену
- */
 export function resolveService<T>(token: any): T {
-  return cloudContainer.inject(token);
+ return cloudContainer.inject(token);
 }

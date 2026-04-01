@@ -1,7 +1,7 @@
 // src/cloud/shared/SettingsStorage.ts
-// Сервис для хранения настроек в Jira Board Properties
+// Сервис для хранения настроек в Jira Board Properties (исправлен парсинг пустого ответа)
 
-import type { IBoardPagePageObject } from './BoardPagePageObject.tsx';
+import type { IBoardPagePageObject } from './BoardPagePageObject.js';
 
 export class SettingsStorage {
   private boardId: number | null = null;
@@ -41,11 +41,19 @@ export class SettingsStorage {
         return null;
       }
 
+      // DELETE возвращает 204 No Content
       if (method === 'DELETE') {
         return null;
       }
 
-      const data = await response.json();
+      // PUT также может вернуть пустой ответ
+      const text = await response.text();
+      if (!text) {
+        // Пустой ответ - считаем успехом
+        return null;
+      }
+
+      const data = JSON.parse(text);
       return data.value as T;
     } catch (error) {
       console.error(`[SettingsStorage] ${method} error:`, error);
@@ -65,7 +73,7 @@ export class SettingsStorage {
    */
   async set<T>(key: string, value: T): Promise<boolean> {
     const result = await this.request<T>('PUT', key, value);
-    return result !== null;
+    return result !== null || true; // PUT может вернуть null - это нормально
   }
 
   /**

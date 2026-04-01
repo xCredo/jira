@@ -7,7 +7,6 @@ import type { AssigneeService } from '../../shared/AssigneeService';
 import type { AvatarIndicatorService } from '../../shared/AvatarIndicatorService';
 import type { IBoardPagePageObject } from '../../shared/BoardPagePageObject';
 import type { ColumnGroupLimitPanel } from './ColumnGroupLimitPanel';
-import type { DynamicUpdater, UpdateSubscriber, UpdateEvent } from '../../shared/DynamicUpdater';
 
 export interface ColumnGroupWipLimit {
   id: string;
@@ -19,11 +18,10 @@ export interface ColumnGroupWipLimit {
   warningColor?: string;
 }
 
-export class ColumnLimitsApplier implements UpdateSubscriber {
+export class ColumnLimitsApplier {
   private enabled = false;
 
   private limits: ColumnGroupWipLimit[] = [];
-  private unsubscribe: (() => void) | undefined = undefined;
 
   constructor(
     private readonly settingsService: SettingsService,
@@ -34,13 +32,8 @@ export class ColumnLimitsApplier implements UpdateSubscriber {
     private readonly boardPage: IBoardPagePageObject
   ) {}
 
-  init(dynamicUpdater?: DynamicUpdater) {
+  init() {
     this.loadSettings();
-    
-    if (dynamicUpdater) {
-      this.unsubscribe = dynamicUpdater.subscribe(this);
-    }
-    
     return this;
   }
 
@@ -158,8 +151,4 @@ export class ColumnLimitsApplier implements UpdateSubscriber {
 
     return this.checkGroupLimit(group).exceeded;
   }
-  
-  onUpdate(event: UpdateEvent): void {
-  this.update();
-}
 }
