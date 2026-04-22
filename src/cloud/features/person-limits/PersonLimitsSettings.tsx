@@ -1,7 +1,10 @@
 // src/cloud/features/person-limits/PersonLimitsSettings.tsx
-// React-компонент настроек персональных WIP-лимитов
+// React-компонент настроек персональных WIP-лимитов (Ant Design)
 
 import React, { useState, useEffect } from 'react';
+import { Checkbox, Select, InputNumber, Button, Table, Space, Switch, ColorPicker, Typography } from 'antd';
+import type { Color } from 'antd/es/color-picker';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { cloudContainer } from '../../shared/di';
 import { settingsServiceToken, assigneeServiceToken, columnServiceToken } from '../../shared/di/tokens';
 import type { Settings } from '../../shared/SettingsService';
@@ -9,6 +12,9 @@ import type { Assignee } from '../../shared/AssigneeService';
 import type { ColumnInfo } from '../../shared/ColumnService';
 import settingsStyles from '../../ui/settings.module.css';
 import styles from './settings.module.css';
+
+const { Title } = Typography;
+const { Option } = Select;
 
 interface PersonLimitRow {
   id: string;
@@ -52,13 +58,12 @@ export const PersonLimitsSettings: React.FC = () => {
     setAvailableColumns(columnService.getColumns());
   };
 
-  const handleToggleEnabled = () => {
+  const handleToggleEnabled = (checked: boolean) => {
     const settingsService = cloudContainer.inject(settingsServiceToken);
-    const newEnabled = !enabled;
-    setEnabled(newEnabled);
+    setEnabled(checked);
     settingsService.updateSettings({
       personalWipLimits: {
-        enabled: newEnabled,
+        enabled: checked,
         limits,
       },
     });
@@ -114,7 +119,6 @@ export const PersonLimitsSettings: React.FC = () => {
   };
 
   const handleEditLimit = (id: string) => {
-    // Логика редактирования - можно реализовать позже
     console.log('Редактирование лимита:', id);
   };
 
@@ -142,173 +146,178 @@ export const PersonLimitsSettings: React.FC = () => {
     setNewLimit({ ...newLimit, columnIds: newColumnIds });
   };
 
+  const handleColorChange = (color: Color) => {
+    const hex = color.toHexString();
+    setNewLimit({ ...newLimit, color: hex });
+  };
+
+  const handleLimitColorChange = (id: string, color: Color) => {
+    handleUpdateLimit(id, 'color', color.toHexString());
+  };
+
+  // Колонки таблицы
+  const columns = [
+    {
+      title: 'Исполнитель',
+      dataIndex: 'userName',
+      key: 'userName',
+    },
+    {
+      title: 'Колонки',
+      dataIndex: 'columnNames',
+      key: 'columnNames',
+      render: (names: string[]) => names.join(', '),
+    },
+    {
+      title: 'Лимит',
+      key: 'limit',
+      render: (_: any, record: PersonLimitRow) => (
+        <InputNumber
+          min={0}
+          value={record.limit}
+          onChange={(val) => handleUpdateLimit(record.id, 'limit', val || 0)}
+          style={{ width: 80 }}
+        />
+      ),
+    },
+    {
+      title: 'Цвет',
+      key: 'color',
+      render: (_: any, record: PersonLimitRow) => (
+        <ColorPicker
+          value={record.color}
+          onChange={(color) => handleLimitColorChange(record.id, color)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      render: (_: any, record: PersonLimitRow) => (
+        <Space>
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => handleEditLimit(record.id)}
+          >
+            Редактировать
+          </Button>
+          <Button
+            icon={<DeleteOutlined />}
+            size="small"
+            danger
+            onClick={() => handleDeleteLimit(record.id)}
+          >
+            Удалить
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div className={settingsStyles.panel} style={{ padding: '20px' }}>
-      <h2>Персональные WIP-лимиты</h2>
+      <Title level={2}>Персональные WIP-лимиты</Title>
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input type="checkbox" checked={enabled} onChange={handleToggleEnabled} />
-          Включить персональные WIP-лимиты
-        </label>
+        <Switch
+          checked={enabled}
+          onChange={handleToggleEnabled}
+          checkedChildren="Включено"
+          unCheckedChildren="Выключено"
+        />
+        <span style={{ marginLeft: '8px' }}>Включить персональные WIP-лимиты</span>
       </div>
 
       {enabled && (
         <>
-          <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
-            <h3>Добавить новый лимит</h3>
+          <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #d9d9d9', borderRadius: '8px' }}>
+            <Title level={4}>Добавить новый лимит</Title>
 
-            <div style={{ marginBottom: '10px' }}>
-              <label>Исполнитель:</label>
-              <select
-                value={newLimit.userId}
-                onChange={e => setNewLimit({ ...newLimit, userId: e.target.value })}
-                style={{ marginLeft: '10px' }}
-              >
-                <option value="">Выберите исполнителя</option>
-                {availableAssignees.map(assignee => (
-                  <option key={assignee.id} value={assignee.id}>
-                    {assignee.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '10px' }}>
-              <label>Колонки:</label>
-              <div style={{ marginTop: '5px' }}>
-                {availableColumns.map(column => (
-                  <label key={column.id} style={{ marginRight: '15px', display: 'inline-block' }}>
-                    <input
-                      type="checkbox"
-                      checked={newLimit.columnIds.includes(column.id)}
-                      onChange={() => handleColumnToggle(column.id)}
-                    />
-                    {column.name}
-                  </label>
-                ))}
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div>
+                <label>Исполнитель:</label>
+                <Select
+                  value={newLimit.userId}
+                  onChange={(value) => {
+                    const selectedUser = availableAssignees.find(a => a.id === value);
+                    setNewLimit({
+                      ...newLimit,
+                      userId: value,
+                      userName: selectedUser?.name || '',
+                    });
+                  }}
+                  style={{ marginLeft: '10px', width: 200 }}
+                  placeholder="Выберите исполнителя"
+                >
+                  {availableAssignees.map(assignee => (
+                    <Option key={assignee.id} value={assignee.id}>
+                      {assignee.name}
+                    </Option>
+                  ))}
+                </Select>
               </div>
-            </div>
 
-            <div style={{ marginBottom: '10px' }}>
-              <label>Лимит:</label>
-              <input
-                type="number"
-                value={newLimit.limit}
-                onChange={e => setNewLimit({ ...newLimit, limit: parseInt(e.target.value) || 0 })}
-                min={1}
-                style={{ marginLeft: '10px', width: '60px' }}
-              />
-            </div>
+              <div>
+                <label>Колонки:</label>
+                <div style={{ marginTop: '8px' }}>
+                  <Space wrap>
+                    {availableColumns.map(column => (
+                      <Checkbox
+                        key={column.id}
+                        checked={newLimit.columnIds.includes(column.id)}
+                        onChange={() => handleColumnToggle(column.id)}
+                      >
+                        {column.name}
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </div>
+              </div>
 
-            <div style={{ marginBottom: '10px' }}>
-              <label>Цвет:</label>
-              <input
-                type="color"
-                value={newLimit.color}
-                onChange={e => setNewLimit({ ...newLimit, color: e.target.value })}
-                style={{ marginLeft: '10px' }}
-              />
-            </div>
+              <div>
+                <label>Лимит:</label>
+                <InputNumber
+                  min={1}
+                  value={newLimit.limit}
+                  onChange={(val) => setNewLimit({ ...newLimit, limit: val || 0 })}
+                  style={{ marginLeft: '10px', width: 80 }}
+                />
+              </div>
 
-            <button
-              onClick={handleAddLimit}
-              disabled={!newLimit.userId || newLimit.columnIds.length === 0}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#0052cc',
-                color: 'white',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-              }}
-            >
-              Добавить лимит
-            </button>
+              <div>
+                <label>Цвет:</label>
+                <ColorPicker
+                  value={newLimit.color}
+                  onChange={handleColorChange}
+                  style={{ marginLeft: '10px' }}
+                />
+              </div>
+
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddLimit}
+                disabled={!newLimit.userId || newLimit.columnIds.length === 0}
+              >
+                Добавить лимит
+              </Button>
+            </Space>
           </div>
 
           <div>
-            <h3>Текущие лимиты</h3>
+            <Title level={4}>Текущие лимиты</Title>
             {limits.length === 0 ? (
               <p>Лимиты не настроены</p>
             ) : (
-              <div style={{ overflowX: 'auto', marginTop: '16px' }}>
-                <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Исполнитель</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Колонки</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Лимит</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Цвет</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {limits.map(limit => (
-                      <tr key={limit.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '8px' }}>{limit.userName}</td>
-                        <td style={{ padding: '8px' }}>{limit.columnNames.join(', ')}</td>
-                        <td style={{ padding: '8px' }}>
-                          <input
-                            type="number"
-                            value={limit.limit === 0 ? '' : limit.limit}
-                            onChange={e => {
-                              const val = e.target.value;
-                              if (val === '') {
-                                handleUpdateLimit(limit.id, 'limit', 0);
-                              } else {
-                                const num = parseInt(val);
-                                if (!isNaN(num) && num > 0) {
-                                  handleUpdateLimit(limit.id, 'limit', num);
-                                }
-                              }
-                            }}
-                            min={1}
-                            style={{ width: '60px' }}
-                          />
-                        </td>
-                        <td style={{ padding: '8px' }}>
-                          <input
-                            type="color"
-                            value={limit.color}
-                            onChange={e => handleUpdateLimit(limit.id, 'color', e.target.value)}
-                          />
-                        </td>
-                        <td style={{ padding: '8px' }}>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={() => handleEditLimit(limit.id)}
-                              style={{
-                                padding: '4px 8px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px',
-                                background: 'white',
-                                cursor: 'pointer',
-                              }}
-                              title="Редактировать"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteLimit(limit.id)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#de350b',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              ❌
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table
+                dataSource={limits}
+                columns={columns}
+                rowKey="id"
+                size="middle"
+                scroll={{ x: 800 }}
+              />
             )}
           </div>
         </>

@@ -1,5 +1,7 @@
 // src/cloud/content.cloud.ts
-// Точка входа для Jira Cloud (исправлена асинхронная инициализация)
+// Точка входа для Jira Cloud (исправлена асинхронная инициализация + Ant Design)
+
+import 'antd/dist/reset.css';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';

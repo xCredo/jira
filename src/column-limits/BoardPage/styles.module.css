@@ -343,43 +343,6 @@
   z-index: 10 !important;
 }
 
-/* ВСЕ ТРИ ТИПА ПОДСВЕТКИ ОДНОВРЕМЕННО */
-[data-jh-wip-overloaded="true"] {
-  /* 1. Полоска слева - УСИЛЕННАЯ */
-  border-left: 8px solid var(--wip-color, #808080) !important;
-  padding-left: 8px !important;
-  
-  /* 2. Цвет фона - С ПРОЗРАЧНОСТЬЮ */
-  background-color: rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.3) !important;
-  
-  /* 3. Цветная рамка - ДВОЙНАЯ */
-  border: 3px solid var(--wip-color, #808080) !important;
-  border-radius: 4px !important;
-  box-shadow: 
-    0 0 0 1px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.2),
-    0 0 10px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.15) !important;
-}
-
-/* Значок предупреждения */
-/* [data-jh-wip-overloaded="true"]::before {
-  content: '⚠️' !important;
-  position: absolute !important;
-  top: 4px !important;
-  right: 4px !important;
-  font-size: 12px !important;
-  background: white !important;
-  border-radius: 50% !important;
-  width: 18px !important;
-  height: 18px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border: 1px solid var(--wip-color, #808080) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
-  z-index: 1000 !important;
-  pointer-events: none !important;
-}
- */
 :root {
   --wip-default-color: #808080; /* Серый по умолчанию */
   --wip-default-r: 128;
@@ -392,18 +355,4 @@
   position: relative !important;
   z-index: 1000 !important;
   isolation: isolate !important;
-}
-
-[data-jh-wip-overloaded="true"] {
-  /* CSS Custom Properties для цвета */
-  --wip-color: var(--wip-custom-color, #808080) !important;
-  
-  border-left: 10px solid var(--wip-color) !important;
-  padding-left: 10px !important;
-  background-color: rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.4) !important;
-  border: 5px solid var(--wip-color) !important;
-  border-radius: 6px !important;
-  box-shadow: 
-    0 0 0 3px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.3),
-    0 0 15px rgba(var(--wip-r, 128), var(--wip-g, 128), var(--wip-b, 128), 0.2) !important;
 }

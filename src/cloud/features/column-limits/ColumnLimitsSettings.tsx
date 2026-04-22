@@ -1,11 +1,16 @@
 // src/cloud/features/column-limits/ColumnLimitsSettings.tsx
-// React-компонент настроек групповых WIP-лимитов
+// React-компонент настроек групповых WIP-лимитов (Ant Design)
 
 import React, { useState, useEffect } from 'react';
+import { Checkbox, Input, InputNumber, Button, Table, Space, Switch, ColorPicker, Typography, Card } from 'antd';
+import type { Color } from 'antd/es/color-picker';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { cloudContainer } from '../../shared/di';
 import { settingsServiceToken, columnServiceToken } from '../../shared/di/tokens';
 import type { ColumnInfo } from '../../shared/ColumnService';
 import settingsStyles from '../../ui/settings.module.css';
+
+const { Title } = Typography;
 
 interface ColumnGroupLimitRow {
   id: string;
@@ -46,13 +51,12 @@ export const ColumnLimitsSettings: React.FC = () => {
     setAvailableColumns(columnService.getColumns());
   };
 
-  const handleToggleEnabled = () => {
+  const handleToggleEnabled = (checked: boolean) => {
     const settingsService = cloudContainer.inject(settingsServiceToken);
-    const newEnabled = !enabled;
-    setEnabled(newEnabled);
+    setEnabled(checked);
     settingsService.updateSettings({
       columnGroupWipLimits: {
-        enabled: newEnabled,
+        enabled: checked,
         limits,
       },
     });
@@ -105,7 +109,6 @@ export const ColumnLimitsSettings: React.FC = () => {
   };
 
   const handleEditLimit = (id: string) => {
-    // Логика редактирования - можно реализовать позже
     console.log('Редактирование группы:', id);
   };
 
@@ -133,191 +136,190 @@ export const ColumnLimitsSettings: React.FC = () => {
     setNewLimit({ ...newLimit, columnIds: newColumnIds });
   };
 
+  const handleBaseColorChange = (color: Color) => {
+    setNewLimit({ ...newLimit, baseColor: color.toHexString() });
+  };
+
+  const handleWarningColorChange = (color: Color) => {
+    setNewLimit({ ...newLimit, warningColor: color.toHexString() });
+  };
+
+  const handleLimitBaseColorChange = (id: string, color: Color) => {
+    handleUpdateLimit(id, 'baseColor', color.toHexString());
+  };
+
+  const handleLimitWarningColorChange = (id: string, color: Color) => {
+    handleUpdateLimit(id, 'warningColor', color.toHexString());
+  };
+
+  // Колонки таблицы
+  const columns = [
+    {
+      title: 'Название',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'Колонки',
+      dataIndex: 'columnNames',
+      key: 'columnNames',
+      render: (names: string[]) => names.join(', '),
+    },
+    {
+      title: 'Лимит',
+      key: 'limit',
+      render: (_: any, record: ColumnGroupLimitRow) => (
+        <InputNumber
+          min={1}
+          value={record.limit}
+          onChange={(val) => handleUpdateLimit(record.id, 'limit', val || 0)}
+          style={{ width: 80 }}
+        />
+      ),
+    },
+    {
+      title: 'Базовый цвет',
+      key: 'baseColor',
+      render: (_: any, record: ColumnGroupLimitRow) => (
+        <ColorPicker
+          value={record.baseColor}
+          onChange={(color) => handleLimitBaseColorChange(record.id, color)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: 'Цвет при превышении',
+      key: 'warningColor',
+      render: (_: any, record: ColumnGroupLimitRow) => (
+        <ColorPicker
+          value={record.warningColor || '#FF0000'}
+          onChange={(color) => handleLimitWarningColorChange(record.id, color)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      render: (_: any, record: ColumnGroupLimitRow) => (
+        <Space>
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => handleEditLimit(record.id)}
+          >
+            Редактировать
+          </Button>
+          <Button
+            icon={<DeleteOutlined />}
+            size="small"
+            danger
+            onClick={() => handleDeleteLimit(record.id)}
+          >
+            Удалить
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div className={settingsStyles.panel} style={{ padding: '20px' }}>
-      <h2>Групповые WIP-лимиты</h2>
+      <Title level={2}>Групповые WIP-лимиты</Title>
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input type="checkbox" checked={enabled} onChange={handleToggleEnabled} />
-          Включить групповые WIP-лимиты
-        </label>
+        <Switch
+          checked={enabled}
+          onChange={handleToggleEnabled}
+          checkedChildren="Включено"
+          unCheckedChildren="Выключено"
+        />
+        <span style={{ marginLeft: '8px' }}>Включить групповые WIP-лимиты</span>
       </div>
 
       {enabled && (
         <>
-          <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
-            <h3>Добавить новую группу</h3>
-
-            <div style={{ marginBottom: '10px' }}>
-              <label>Название группы:</label>
-              <input
-                type="text"
-                value={newLimit.name}
-                onChange={e => setNewLimit({ ...newLimit, name: e.target.value })}
-                placeholder="Например: В разработке"
-                style={{ marginLeft: '10px', width: '200px' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '10px' }}>
-              <label>Колонки:</label>
-              <div style={{ marginTop: '5px' }}>
-                {availableColumns.map(column => (
-                  <label key={column.id} style={{ marginRight: '15px', display: 'inline-block' }}>
-                    <input
-                      type="checkbox"
-                      checked={newLimit.columnIds.includes(column.id)}
-                      onChange={() => handleColumnToggle(column.id)}
-                    />
-                    {column.name}
-                  </label>
-                ))}
+          <Card title="Добавить новую группу" style={{ marginBottom: '30px' }}>
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div>
+                <label>Название группы:</label>
+                <Input
+                  value={newLimit.name}
+                  onChange={(e) => setNewLimit({ ...newLimit, name: e.target.value })}
+                  placeholder="Например: В разработке"
+                  style={{ marginLeft: '10px', width: 250 }}
+                />
               </div>
-            </div>
 
-            <div style={{ marginBottom: '10px' }}>
-              <label>Лимит:</label>
-              <input
-                type="number"
-                value={newLimit.limit}
-                onChange={e => setNewLimit({ ...newLimit, limit: parseInt(e.target.value) || 0 })}
-                min={1}
-                style={{ marginLeft: '10px', width: '60px' }}
-              />
-            </div>
+              <div>
+                <label>Колонки:</label>
+                <div style={{ marginTop: '8px' }}>
+                  <Space wrap>
+                    {availableColumns.map(column => (
+                      <Checkbox
+                        key={column.id}
+                        checked={newLimit.columnIds.includes(column.id)}
+                        onChange={() => handleColumnToggle(column.id)}
+                      >
+                        {column.name}
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </div>
+              </div>
 
-            <div style={{ marginBottom: '10px' }}>
-              <label>Базовый цвет:</label>
-              <input
-                type="color"
-                value={newLimit.baseColor}
-                onChange={e => setNewLimit({ ...newLimit, baseColor: e.target.value })}
-                style={{ marginLeft: '10px' }}
-              />
-            </div>
+              <div>
+                <label>Лимит:</label>
+                <InputNumber
+                  min={1}
+                  value={newLimit.limit}
+                  onChange={(val) => setNewLimit({ ...newLimit, limit: val || 0 })}
+                  style={{ marginLeft: '10px', width: 80 }}
+                />
+              </div>
 
-            <div style={{ marginBottom: '10px' }}>
-              <label>Цвет при превышении:</label>
-              <input
-                type="color"
-                value={newLimit.warningColor}
-                onChange={e => setNewLimit({ ...newLimit, warningColor: e.target.value })}
-                style={{ marginLeft: '10px' }}
-              />
-            </div>
+              <div>
+                <label>Базовый цвет:</label>
+                <ColorPicker
+                  value={newLimit.baseColor}
+                  onChange={handleBaseColorChange}
+                  style={{ marginLeft: '10px' }}
+                />
+              </div>
 
-            <button
-              onClick={handleAddLimit}
-              disabled={!newLimit.name || newLimit.columnIds.length === 0}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#0052cc',
-                color: 'white',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-              }}
-            >
-              Добавить группу
-            </button>
-          </div>
+              <div>
+                <label>Цвет при превышении:</label>
+                <ColorPicker
+                  value={newLimit.warningColor}
+                  onChange={handleWarningColorChange}
+                  style={{ marginLeft: '10px' }}
+                />
+              </div>
+
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddLimit}
+                disabled={!newLimit.name || newLimit.columnIds.length === 0}
+              >
+                Добавить группу
+              </Button>
+            </Space>
+          </Card>
 
           <div>
-            <h3>Текущие группы</h3>
+            <Title level={4}>Текущие группы</Title>
             {limits.length === 0 ? (
               <p>Группы не настроены</p>
             ) : (
-              <div style={{ overflowX: 'auto', marginTop: '16px' }}>
-                <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Название</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Колонки</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Лимит</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Цвета</th>
-                      <th style={{ textAlign: 'left', padding: '8px' }}>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {limits.map(limit => (
-                      <tr key={limit.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '8px' }}>{limit.name}</td>
-                        <td style={{ padding: '8px' }}>{limit.columnNames.join(', ')}</td>
-                        <td style={{ padding: '8px' }}>
-                          <input
-                            type="number"
-                            value={limit.limit === 0 ? '' : limit.limit}
-                            onChange={e => {
-                              const val = e.target.value;
-                              if (val === '') {
-                                handleUpdateLimit(limit.id, 'limit', 0);
-                              } else {
-                                const num = parseInt(val);
-                                if (!isNaN(num) && num > 0) {
-                                  handleUpdateLimit(limit.id, 'limit', num);
-                                }
-                              }
-                            }}
-                            min={1}
-                            style={{ width: '60px' }}
-                          />
-                        </td>
-                        <td style={{ padding: '8px' }}>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <div>
-                              <label style={{ fontSize: '10px' }}>Базовый:</label>
-                              <input
-                                type="color"
-                                value={limit.baseColor}
-                                onChange={e => handleUpdateLimit(limit.id, 'baseColor', e.target.value)}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ fontSize: '10px' }}>Превышение:</label>
-                              <input
-                                type="color"
-                                value={limit.warningColor || '#FF0000'}
-                                onChange={e => handleUpdateLimit(limit.id, 'warningColor', e.target.value)}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ padding: '8px' }}>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={() => handleEditLimit(limit.id)}
-                              style={{
-                                padding: '4px 8px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px',
-                                background: 'white',
-                                cursor: 'pointer',
-                              }}
-                              title="Редактировать"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteLimit(limit.id)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#de350b',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              ❌
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table
+                dataSource={limits}
+                columns={columns}
+                rowKey="id"
+                size="middle"
+                scroll={{ x: 900 }}
+              />
             )}
           </div>
         </>
