@@ -1,6 +1,8 @@
-import { Container, Token } from 'dioma';
+import { Container } from 'dioma';
 import React from 'react';
 import { createRoot, Root } from 'react-dom/client';
+
+import { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 
 class CardPageObject {
   selectors = {
@@ -63,6 +65,13 @@ export interface IBoardPagePageObject {
     column: string;
     columnHeader: string;
     columnTitle: string;
+    daysInColumn: string;
+    swimlaneHeader: string;
+    swimlaneRow: string;
+    avatarImg: string;
+    issueType: string;
+    parentGroup: string;
+    boardHeaderTarget: string;
     issueCardCloud: string;
     boardHeaderCloud: string;
     boardContainerCloud: string;
@@ -78,6 +87,11 @@ export interface IBoardPagePageObject {
   getColumnOfIssue(issueId: string): string;
   getHtml(): string;
   getAllCloudCards(): HTMLElement[];
+  getIssueCssSelector(editData: any): string;
+  getSwimlanes(): Array<{ id: string; element: Element; header: Element }>;
+  hasCustomSwimlanes(): boolean;
+  getColumnElements(): Element[];
+  getColumnsInSwimlane(swimlane: Element): Element[];
 }
 
 export const BoardPagePageObject: IBoardPagePageObject = {
@@ -91,6 +105,13 @@ export const BoardPagePageObject: IBoardPagePageObject = {
     column: '.ghx-column',
     columnHeader: '#ghx-column-headers',
     columnTitle: '.ghx-column-title',
+    daysInColumn: '.ghx-days',
+    swimlaneHeader: '.ghx-swimlane-header',
+    swimlaneRow: '.ghx-swimlane',
+    avatarImg: '.ghx-avatar-img',
+    issueType: '.ghx-type',
+    parentGroup: '.ghx-parent-group',
+    boardHeaderTarget: '#subnav-title',
     issueCardCloud: '[data-testid="platform-board-kit.ui.card.card"]',
     boardHeaderCloud: '[data-testid="software-board.header.controls-bar"]',
     boardContainerCloud: '[data-testid^="software-board.board-container"]',
@@ -149,9 +170,42 @@ export const BoardPagePageObject: IBoardPagePageObject = {
   getAllCloudCards(): HTMLElement[] {
     return Array.from(document.querySelectorAll<HTMLElement>(this.selectors.issueCardCloud));
   },
-};
 
-export const boardPagePageObjectToken = new Token<IBoardPagePageObject>('boardPagePageObjectToken');
+  getIssueCssSelector(editData: any): string {
+    const constraintType = editData?.rapidListConfig?.currentStatisticsField?.typeId ?? '';
+    const cssNotIssueSubTask = constraintType === 'issueCountExclSubs' ? ':not(.ghx-issue-subtask)' : '';
+    return `.ghx-issue${cssNotIssueSubTask}`;
+  },
+
+  getSwimlanes(): Array<{ id: string; element: Element; header: Element }> {
+    const pool = document.querySelector(this.selectors.pool);
+    const swimlanes = pool
+      ? pool.querySelectorAll(this.selectors.swimlaneRow)
+      : document.querySelectorAll(this.selectors.swimlaneRow);
+    return Array.from(swimlanes)
+      .map(swimlane => {
+        const id = swimlane.getAttribute('swimlane-id');
+        const header = swimlane.querySelector(this.selectors.swimlaneHeader);
+        if (!id || !header) return null;
+        return { id, element: swimlane, header };
+      })
+      .filter((s): s is { id: string; element: Element; header: Element } => s !== null);
+  },
+
+  hasCustomSwimlanes(): boolean {
+    const swimlaneHeader = document.querySelector(this.selectors.swimlaneHeader);
+    if (!swimlaneHeader) return false;
+    return swimlaneHeader.getAttribute('aria-label')?.includes('custom') ?? false;
+  },
+
+  getColumnElements(): Element[] {
+    return Array.from(document.querySelectorAll(this.selectors.column));
+  },
+
+  getColumnsInSwimlane(swimlane: Element): Element[] {
+    return Array.from(swimlane.querySelectorAll(this.selectors.column));
+  },
+};
 
 export const registerBoardPagePageObjectInDI = (container: Container) => {
   container.register({ token: boardPagePageObjectToken, value: BoardPagePageObject });

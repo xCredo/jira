@@ -3,6 +3,7 @@ import { globalContainer } from 'dioma';
 import { setAutoFreeze } from 'immer';
 import { Routes } from './routing';
 import { isJira } from './shared/utils';
+import { jiraEnvironmentToken } from './shared/di/jiraEnvironmentToken';
 import AddSlaLine from './charts/AddSlaLine';
 import AddChartGrid from './charts/AddChartGrid';
 import runModifications from './shared/runModifications';
@@ -47,6 +48,7 @@ const domLoaded = () =>
 
 function initDiContainer() {
   const container = globalContainer;
+  container.register({ token: jiraEnvironmentToken, value: { type: 'server' } });
   registerBoardPagePageObjectInDI(container);
   registerBoardPropertyServiceInDI(container);
   registerJiraServiceInDI(container);

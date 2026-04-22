@@ -1,5 +1,5 @@
 // src/cloud/shared/di/container.ts
-// DI-контейнер для cloud-версии расширения (добавлена подписка на onSettingsChanged)
+// DI-контейнер для cloud-версии расширения (используем Server токен)
 
 import { Container } from 'dioma';
 import {
@@ -7,13 +7,14 @@ import {
  columnServiceToken,
  assigneeServiceToken,
  avatarIndicatorServiceToken,
- boardPagePageObjectToken,
  personLimitsApplierToken,
  columnLimitsApplierToken,
  columnGroupLimitPanelToken,
  assigneeHighlighterApplierToken,
  dynamicUpdaterToken,
 } from './tokens';
+import { registerJiraApiCloudInDI } from './jiraApiTokens.cloud';
+import { boardPagePageObjectToken } from '../../../shared/di/boardPageObjectToken';
 
 import { SettingsService } from '../SettingsService';
 import { ColumnService } from '../ColumnService';
@@ -138,6 +139,9 @@ export function registerCloudServices(): void {
  registerPersonLimits(cloudContainer);
  registerColumnLimits(cloudContainer);
  registerAssigneeHighlighter(cloudContainer);
+
+ // Регистрируем Cloud API адаптеры
+ registerJiraApiCloudInDI(cloudContainer);
 
  console.log('[DI] Cloud services registered');
 }

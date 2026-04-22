@@ -53,6 +53,7 @@
     },
     {
         "matches": ["*://*/jira/*"],
+        "exclude_matches": ["*://*.atlassian.net/*"],
         "js": ["src/content.ts"]
     }
     ],

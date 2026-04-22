@@ -1,6 +1,7 @@
+import { Container, Token } from 'dioma';
 import { PageModification } from '../../shared/PageModification';
 import { BOARD_PROPERTIES } from '../../shared/constants';
-import { settingsJiraDOM as DOM } from '../../swimlane/constants';
+import { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 
 interface PersonLimit {
   person: {
@@ -35,7 +36,7 @@ const isPersonLimitAppliedToIssue = (
 };
 
 const getNameFromTooltip = (tooltip: string): string => {
-  return tooltip.split(':')[1].split('[')[0].trim(); // Assignee: Pavel [x]
+  return tooltip.split(':')[1].split('[')[0].trim();
 };
 
 const getAssignee = (avatar: HTMLImageElement | null): string | null => {
@@ -47,10 +48,14 @@ const getAssignee = (avatar: HTMLImageElement | null): string | null => {
   return getNameFromTooltip(label);
 };
 
-export default class extends PageModification<[any, any], Element> {
+export default class PersonLimitsBoardPage extends PageModification<[any, any], Element> {
   private cssSelectorOfIssues: string | null = null;
 
   private avatarsList: null | Element = null;
+
+  constructor(protected container: Container = globalContainer) {
+    super(container);
+  }
 
   shouldApply(): boolean {
     const view = this.getSearchParam('view');
@@ -101,15 +106,7 @@ export default class extends PageModification<[any, any], Element> {
             font-weight: 400;
         }
 
-        .ghx-issue.no-visibility {
-            display: none!important;
-        }
-
-        .ghx-swimlane.no-visibility {
-            display: none!important;
-        }
-
-        .ghx-parent-group.no-visibility {
+        .no-visibility {
             display: none!important;
         }
     </style>
@@ -117,7 +114,8 @@ export default class extends PageModification<[any, any], Element> {
   }
 
   waitForLoading(): Promise<Element> {
-    return this.waitForElement('.ghx-swimlane');
+    const po = this.container.inject(boardPagePageObjectToken);
+    return this.waitForElement(po.selectors.swimlaneRow);
   }
 
   loadData(): Promise<[any, any]> {
@@ -129,9 +127,10 @@ export default class extends PageModification<[any, any], Element> {
     const [editData = {}, personLimits] = data;
     if (!personLimits || !personLimits.limits.length) return;
 
-    this.cssSelectorOfIssues = this.getCssSelectorOfIssues(editData);
+    const po = this.container.inject(boardPagePageObjectToken);
+    this.cssSelectorOfIssues = po.getIssueCssSelector(editData);
     this.applyLimits(personLimits);
-    this.onDOMChange('#ghx-pool', () => this.applyLimits(personLimits), { childList: true, subtree: true });
+    this.onDOMChange(po.selectors.pool, () => this.applyLimits(personLimits), { childList: true, subtree: true });
   }
 
   applyLimits(personLimits: { limits: PersonLimit[] }): void {
@@ -165,7 +164,8 @@ export default class extends PageModification<[any, any], Element> {
 
       // @ts-expect-error
       this.addEventListener(this.avatarsList, 'click', event => this.onClickAvatar(event));
-      document.querySelector('#subnav-title')?.insertBefore(this.avatarsList, null);
+      const po = this.container.inject(boardPagePageObjectToken);
+      document.querySelector(po.selectors.boardHeaderTarget)?.insertBefore(this.avatarsList, null);
     }
 
     this.avatarsList.querySelectorAll('.limit-stats').forEach((stat, index) => {
@@ -193,7 +193,8 @@ export default class extends PageModification<[any, any], Element> {
   }
 
   showOnlyChosen(): void {
-    const cards = Array.from(document.querySelectorAll('.ghx-issue'));
+    const po = this.container.inject(boardPagePageObjectToken);
+    const cards = Array.from(document.querySelectorAll(po.selectors.issue));
     const isHaveChoose = document.querySelectorAll('[view-my-cards="block"]').length > 0;
 
     if (!isHaveChoose) {
@@ -208,29 +209,12 @@ export default class extends PageModification<[any, any], Element> {
     const avaTitles = avatar.map(el => (el as HTMLImageElement).title);
 
     cards.forEach(node => {
-      /** there are can be two types of nodes:
-       * 1. assigned to user with avatar
-       * 2. assigned to user without avatar
-       *
-       * Example of node with avatar
-       * <div class="ghx-avatar"><img src="https://jira.domain.com/secure/useravatar?ownerId=JIRAUSER1337&amp;avatarId=1337" class="ghx-avatar-img" alt="Assignee: Leet Elite" data-tooltip="Assignee: Leet Elite"></div>
-       *
-       * Example of node without avatar
-       * <div class="ghx-avatar"><span class="ghx-avatar-img ghx-auto-avatar" data-tooltip="Assignee: Leet Elite" original-title="">L</span></div>
-       *
-       * We need to check data-tooltip attribute for both cases
-       */
-      const tooltipHolder = node.querySelector('.ghx-avatar img') || node.querySelector('.ghx-avatar span');
+      const tooltipHolder = node.querySelector(po.selectors.avatarImg.replace('img', '')) || node.querySelector('.ghx-avatar span');
       if (!tooltipHolder) {
-        // card without assignee at all
         node.classList.add('no-visibility');
         return;
       }
 
-      /**
-       * jira with version 8.x has tooltip text in attribute data-tooltip
-       * jira with version 9.x has tooltip text in attribute alt
-       */
       const tooltipText = tooltipHolder.getAttribute('data-tooltip') || tooltipHolder.getAttribute('alt');
       const name = getNameFromTooltip(tooltipText!);
       if (avaTitles.includes(name)) {
@@ -248,22 +232,25 @@ export default class extends PageModification<[any, any], Element> {
   }
 
   showOrHideSubTaskParentGroup(): void {
-    const parentGroup = Array.from(document.querySelectorAll('.ghx-parent-group'));
+    const po = this.container.inject(boardPagePageObjectToken);
+    const parentGroup = Array.from(document.querySelectorAll(po.selectors.parentGroup));
     parentGroup.forEach(el => {
       this.showOrHideElementByVisibleIssueCards(el);
     });
   }
 
   showOrHideEmptySwimlanes(): void {
-    const swimlanes = Array.from(document.querySelectorAll(DOM.swimlane));
-    swimlanes.forEach(el => {
-      this.showOrHideElementByVisibleIssueCards(el);
+    const po = this.container.inject(boardPagePageObjectToken);
+    const swimlanes = po.getSwimlanes();
+    swimlanes.forEach(swimlane => {
+      this.showOrHideElementByVisibleIssueCards(swimlane.element);
     });
   }
 
   showOrHideElementByVisibleIssueCards(el: Element): void {
-    const lenNoVisibleCards = el.querySelectorAll('.ghx-issue.no-visibility').length;
-    const lenCard = el.querySelectorAll('.ghx-issue').length;
+    const po = this.container.inject(boardPagePageObjectToken);
+    const lenNoVisibleCards = el.querySelectorAll(`${po.selectors.issue}.no-visibility`).length;
+    const lenCard = el.querySelectorAll(po.selectors.issue).length;
 
     if (lenNoVisibleCards === lenCard) {
       el.classList.add('no-visibility');
@@ -273,21 +260,16 @@ export default class extends PageModification<[any, any], Element> {
   }
 
   hasCustomswimlanes(): boolean {
-    const someswimlane = document.querySelector(DOM.swimlaneHeaderContainer);
-
-    if (someswimlane == null) {
-      return false;
-    }
-
-    // TODO: Shouldn't work for any other language except English, so we have to think about it. F.e., in Russian, it is "Дорожка для custom"
-    return someswimlane.getAttribute('aria-label')?.includes('custom') ?? false;
+    const po = this.container.inject(boardPagePageObjectToken);
+    return po.hasCustomSwimlanes();
   }
 
   countAmountPersonalIssuesInColumn(column: Element, stats: PersonLimit[], swimlaneId?: string | null): void {
+    const po = this.container.inject(boardPagePageObjectToken);
     const { columnId } = (column as HTMLElement).dataset;
 
     column.querySelectorAll(this.cssSelectorOfIssues!).forEach(issue => {
-      const avatar = issue.querySelector('.ghx-avatar-img') as HTMLImageElement;
+      const avatar = issue.querySelector(po.selectors.avatarImg) as HTMLImageElement;
       const assignee = getAssignee(avatar);
 
       if (assignee) {
@@ -301,27 +283,28 @@ export default class extends PageModification<[any, any], Element> {
   }
 
   getLimitsStats(personLimits: { limits: PersonLimit[] }): PersonLimit[] {
+    const po = this.container.inject(boardPagePageObjectToken);
     const stats = personLimits.limits.map(personLimit => ({
       ...personLimit,
       issues: [] as HTMLElement[],
     }));
 
     if (this.hasCustomswimlanes()) {
-      document.querySelectorAll(DOM.swimlane).forEach(swimlane => {
-        const swimlaneId = swimlane.getAttribute('swimlane-id');
-
-        swimlane.querySelectorAll('.ghx-column').forEach(column => {
-          this.countAmountPersonalIssuesInColumn(column, stats, swimlaneId);
+      po.getSwimlanes().forEach(swimlane => {
+        po.getColumnsInSwimlane(swimlane.element).forEach(column => {
+          this.countAmountPersonalIssuesInColumn(column, stats, swimlane.id);
         });
       });
 
       return stats;
     }
 
-    document.querySelectorAll('.ghx-column').forEach(column => {
+    po.getColumnElements().forEach(column => {
       this.countAmountPersonalIssuesInColumn(column, stats);
     });
 
     return stats;
   }
 }
+
+export const personLimitsBoardPageToken = new Token<PersonLimitsBoardPage>('PersonLimitsBoardPage');

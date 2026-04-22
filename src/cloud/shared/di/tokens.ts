@@ -2,6 +2,10 @@
 // Токены для DI-контейнера
 
 import { Token } from 'dioma';
+import { boardPagePageObjectToken as sharedBoardPageObjectToken } from 'src/shared/di/boardPageObjectToken';
+
+// Re-export the shared token so modules can import from here
+export { boardPagePageObjectToken as sharedBoardPageObjectToken } from 'src/shared/di/boardPageObjectToken';
 
 // Services
 export const settingsServiceToken = new Token<import('../SettingsService').SettingsService>('SettingsService');
@@ -11,9 +15,6 @@ export const avatarIndicatorServiceToken = new Token<import('../AvatarIndicatorS
   'AvatarIndicatorService'
 );
 export const settingsStorageToken = new Token<import('../SettingsStorage').SettingsStorage>('SettingsStorage');
-export const boardPagePageObjectToken = new Token<import('../BoardPagePageObject').IBoardPagePageObject>(
-  'BoardPagePageObject'
-);
 
 // Appliers
 export const personLimitsApplierToken = new Token<

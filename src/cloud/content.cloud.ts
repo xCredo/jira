@@ -5,6 +5,8 @@ import 'antd/dist/reset.css';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { globalContainer } from 'dioma';
+import { jiraEnvironmentToken } from '../shared/di/jiraEnvironmentToken';
 import {
  cloudContainer,
  registerCloudServices,
@@ -57,9 +59,12 @@ function waitForMount(): void {
 
 // Инициализация всех модулей (async)
 export async function initializeCloudExtension(): Promise<void> {
- console.log('[Jira Helper Cloud] Инициализация расширения для Jira Cloud');
+  console.log('[Jira Helper Cloud] Инициализация расширения для Jira Cloud');
 
- registerCloudServices();
+  // Регистрируем тип окружения
+  globalContainer.register({ token: jiraEnvironmentToken, value: { type: 'cloud' } });
+
+  registerCloudServices();
  waitForMount();
 
  const personLimitsApplier = cloudContainer.inject(personLimitsApplierToken);
