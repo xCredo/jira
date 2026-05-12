@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { globalContainer } from 'dioma';
 import { WithDi } from 'src/shared/diContext';
 import { boardPagePageObjectToken, BoardPagePageObject } from 'src/page-objects/BoardPage';
+import { registerBoardPagePageObjectInDI } from 'src/page-objects/BoardPage';
 import { BoardPropertyServiceToken } from 'src/shared/boardPropertyService';
 import { useSubTaskProgressBoardPropertyStore } from 'src/features/sub-tasks-progress/SubTaskProgressSettings/stores/subTaskProgressBoardProperty';
 import { registerLogger } from 'src/shared/Logger';
@@ -34,6 +35,7 @@ function setup({
 }) {
   const container = globalContainer;
   const getColumnsSpy = vi.fn(() => columnsOnBoard);
+  registerBoardPagePageObjectInDI(container);
   container.register({
     token: boardPagePageObjectToken,
     value: {

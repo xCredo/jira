@@ -1,6 +1,7 @@
 import { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { BoardPagePageObject, boardPagePageObjectToken } from 'src/page-objects/BoardPage';
+import { registerBoardPagePageObjectInDI } from 'src/page-objects/BoardPage';
 
 import { withStore } from 'src/shared/testTools/storyWithStore';
 import { withDi } from 'src/shared/testTools/storyWithDi';
@@ -32,6 +33,7 @@ export const Default: StoryType = {
   },
   decorators: [
     withDi(container => {
+      registerBoardPagePageObjectInDI(container);
       container.register({
         token: boardPagePageObjectToken,
         value: {
@@ -62,6 +64,7 @@ export const aLotOfColumns: StoryType = {
   },
   decorators: [
     withDi(container => {
+      registerBoardPagePageObjectInDI(container);
       container.register({
         token: boardPagePageObjectToken,
         value: {
@@ -83,6 +86,7 @@ export const aLotOfColumns: StoryType = {
 export const boardPropertyHasColumnThatIsNotInBoardAndBoardPropertyHasColumnsThatAreNotInBoardProperty: StoryType = {
   decorators: [
     withDi(container => {
+      registerBoardPagePageObjectInDI(container);
       container.register({
         token: boardPagePageObjectToken,
         value: {

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDi, WithDi } from 'src/shared/diContext';
-import { boardPagePageObjectToken } from 'src/page-objects/BoardPage';
+import { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 import { globalContainer } from 'dioma';
 import { loadSubtasksForIssue } from 'src/shared/jira/stores/jiraSubtasks.actions';
 import { useGetSettings } from '../hooks/useGetSettings';

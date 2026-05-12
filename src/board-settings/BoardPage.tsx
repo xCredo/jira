@@ -1,6 +1,6 @@
 import React from 'react';
 import { Container } from 'dioma';
-import { boardPagePageObjectToken } from 'src/page-objects/BoardPage';
+import { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 import { createRoot } from 'react-dom/client';
 import { PageModification } from '../shared/PageModification';
 import { BoardSettingsComponent } from './BoardSettingsComponent';

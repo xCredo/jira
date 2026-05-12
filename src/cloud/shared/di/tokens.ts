@@ -2,10 +2,9 @@
 // Токены для DI-контейнера
 
 import { Token } from 'dioma';
-import { boardPagePageObjectToken as sharedBoardPageObjectToken } from 'src/shared/di/boardPageObjectToken';
 
-// Re-export the shared token so modules can import from here
-export { boardPagePageObjectToken as sharedBoardPageObjectToken } from 'src/shared/di/boardPageObjectToken';
+// Re-export the shared boardPagePageObjectToken
+export { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 
 // Services
 export const settingsServiceToken = new Token<import('../SettingsService').SettingsService>('SettingsService');

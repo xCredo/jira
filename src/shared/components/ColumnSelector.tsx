@@ -1,7 +1,8 @@
 import Checkbox from 'antd/es/checkbox';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Tooltip } from 'antd';
-import { BoardPagePageObject, boardPagePageObjectToken } from 'src/page-objects/BoardPage';
+import { BoardPagePageObject } from 'src/page-objects/BoardPage';
+import { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 import { useDi } from 'src/shared/diContext';
 import { useGetTextsByLocale } from 'src/shared/texts';
 import { WarningFilled } from '@ant-design/icons';

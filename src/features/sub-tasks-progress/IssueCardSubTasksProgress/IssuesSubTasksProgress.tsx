@@ -5,7 +5,7 @@ import {
   useSubtasksProgressByCustomGroup,
 } from 'src/features/sub-tasks-progress/IssueCardSubTasksProgress/hooks/useSubtasksProgress';
 import { useDi, WithDi } from 'src/shared/diContext';
-import { boardPagePageObjectToken } from 'src/page-objects/BoardPage';
+import { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
 
 import { globalContainer } from 'dioma';
 import cn from 'classnames';
