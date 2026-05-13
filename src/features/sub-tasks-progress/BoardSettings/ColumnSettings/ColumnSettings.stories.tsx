@@ -1,12 +1,11 @@
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/react-vite';
 import React from 'react';
 import { withDi } from 'src/shared/testTools/storyWithDi';
 import { withStore } from 'src/shared/testTools/storyWithStore';
-import { boardPagePageObjectToken } from 'src/page-objects/BoardPage';
-import { registerBoardPagePageObjectInDI } from 'src/page-objects/BoardPage';
+import { boardPagePageObjectToken } from 'src/infrastructure/page-objects/BoardPage';
 import { useSubTaskProgressBoardPropertyStore } from 'src/features/sub-tasks-progress/SubTaskProgressSettings/stores/subTaskProgressBoardProperty';
 
-import { BoardPagePageObjectMock } from 'src/page-objects/BoardPage.mock';
+import { BoardPagePageObjectMock } from 'src/infrastructure/page-objects/BoardPage.mock';
 import { ColumnsSettingsContainer } from './ColumnSettings';
 
 const meta: Meta<typeof ColumnsSettingsContainer> = {
@@ -25,7 +24,6 @@ export const Default: StoryType = {
   render: () => <ColumnsSettingsContainer />,
   decorators: [
     withDi(container => {
-      registerBoardPagePageObjectInDI(container);
       container.register({
         token: boardPagePageObjectToken,
         value: {
@@ -49,7 +47,6 @@ export const LotOfColumns: StoryType = {
   render: () => <ColumnsSettingsContainer />,
   decorators: [
     withDi(container => {
-      registerBoardPagePageObjectInDI(container);
       container.register({
         token: boardPagePageObjectToken,
         value: {
@@ -97,7 +94,6 @@ export const Loading: StoryType = {
   render: () => <ColumnsSettingsContainer />,
   decorators: [
     withDi(container => {
-      registerBoardPagePageObjectInDI(container);
       container.register({
         token: boardPagePageObjectToken,
         value: {

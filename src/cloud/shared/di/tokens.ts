@@ -1,10 +1,10 @@
 // src/cloud/shared/di/tokens.ts
-// Токены для DI-контейнера
+// Токены для DI-контейнера Cloud
 
 import { Token } from 'dioma';
 
-// Re-export the shared boardPagePageObjectToken
-export { boardPagePageObjectToken } from 'src/shared/di/boardPageObjectToken';
+// Re-export the shared boardPagePageObjectToken from infrastructure
+export { boardPagePageObjectToken } from '../../../infrastructure/page-objects/BoardPage';
 
 // Services
 export const settingsServiceToken = new Token<import('../SettingsService').SettingsService>('SettingsService');

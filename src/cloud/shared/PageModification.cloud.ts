@@ -15,7 +15,7 @@ export abstract class PageModificationCloud<
 > {
   sideEffects: SideEffect[] = [];
 
-  constructor(protected container: Container) {}
+  constructor(protected container: Container = globalContainer) {}
 
   abstract getModificationId(): string;
 
