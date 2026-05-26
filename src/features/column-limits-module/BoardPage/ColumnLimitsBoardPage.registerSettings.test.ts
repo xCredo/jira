@@ -17,6 +17,10 @@ vi.mock('src/features/board-settings/actions/registerSettings', () => ({
 }));
 
 const mockBoardPO = {
+  selectors: {
+    pool: '#ghx-pool',
+    columnHeader: '#ghx-column-headers',
+  },
   getOrderedColumnIds: vi.fn(() => ['c1']),
   getOrderedColumns: vi.fn(() => [{ id: 'c1', name: 'Col1' }]),
   getColumnHeaderElement: vi.fn(() => null),

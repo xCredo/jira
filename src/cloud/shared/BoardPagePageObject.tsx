@@ -222,4 +222,112 @@ export const BoardPagePageObject: IBoardPagePageObject = {
   getColumnsInSwimlane(_swimlane: Element): Element[] {
     return [];
   },
+
+  getColumnHeaderElement(columnId: string): HTMLElement | null {
+    const columns = document.querySelectorAll<HTMLElement>(this.selectors.column);
+    for (const col of columns) {
+      if (col.getAttribute('data-column-id') === columnId || col.getAttribute('data-id') === columnId) {
+        return col;
+      }
+    }
+    const header = document.querySelector(this.selectors.columnHeader);
+    if (!header) return null;
+    return header.querySelector<HTMLElement>(`[data-id="${columnId}"]`);
+  },
+
+  getOrderedColumnIds(): string[] {
+    const columnContainers = Array.from(document.querySelectorAll(this.selectors.column));
+    const ids = columnContainers
+      .map(col => col.getAttribute('data-column-id') || col.getAttribute('data-id') || '')
+      .filter(Boolean);
+    if (ids.length > 0) {
+      return ids;
+    }
+    const header = document.querySelector(this.selectors.columnHeader);
+    if (!header) {
+      return [];
+    }
+    return Array.from(header.querySelectorAll('[data-id]'))
+      .map(el => el.getAttribute('data-id') || '')
+      .filter(Boolean);
+  },
+
+  getOrderedColumns(): Array<{ id: string; name: string }> {
+    const ids = this.getOrderedColumnIds();
+    return ids.map(id => {
+      const headerEl = this.getColumnHeaderElement(id);
+      let name = '';
+      if (headerEl) {
+        const titleEl = headerEl.querySelector(this.selectors.columnTitle);
+        name = titleEl?.textContent?.trim() ?? '';
+        if (!name) {
+          name = headerEl.querySelector('h2, h3')?.textContent?.trim() ?? '';
+        }
+      }
+      return { id, name };
+    });
+  },
+
+  getSwimlaneIds(): string[] {
+    return [];
+  },
+
+  getIssueCountInColumn(columnId: string, _options?: any): number {
+    const columns = document.querySelectorAll(this.selectors.column);
+    for (const col of columns) {
+      const colId = col.getAttribute('data-column-id') || col.getAttribute('data-id');
+      if (colId === columnId) {
+        return col.querySelectorAll(this.selectors.issue).length;
+      }
+    }
+    return 0;
+  },
+
+  styleColumnHeader(columnId: string, styles: Partial<CSSStyleDeclaration>): void {
+    const el = this.getColumnHeaderElement(columnId);
+    if (!el) return;
+    Object.assign(el.style, styles);
+  },
+
+  resetColumnHeaderStyles(columnId: string): void {
+    const el = this.getColumnHeaderElement(columnId);
+    if (!el) return;
+    const { style } = el;
+    style.removeProperty('background-color');
+    style.removeProperty('border-top');
+    style.removeProperty('border-top-left-radius');
+    style.removeProperty('border-top-right-radius');
+  },
+
+  insertColumnHeaderHtml(columnId: string, html: string): void {
+    const el = this.getColumnHeaderElement(columnId);
+    if (!el) return;
+    el.insertAdjacentHTML('beforeend', html);
+  },
+
+  removeColumnHeaderElements(columnId: string, selector: string): void {
+    const el = this.getColumnHeaderElement(columnId);
+    if (!el) return;
+    el.querySelectorAll(selector).forEach(e => e.remove());
+  },
+
+  highlightColumnCells(columnId: string, color: string, _excludedSwimlaneIds?: string[]): void {
+    const columns = document.querySelectorAll<HTMLElement>(this.selectors.column);
+    for (const col of columns) {
+      const colId = col.getAttribute('data-column-id') || col.getAttribute('data-id');
+      if (colId === columnId) {
+        col.style.backgroundColor = color;
+      }
+    }
+  },
+
+  resetColumnCellStyles(columnId: string): void {
+    const columns = document.querySelectorAll<HTMLElement>(this.selectors.column);
+    for (const col of columns) {
+      const colId = col.getAttribute('data-column-id') || col.getAttribute('data-id');
+      if (colId === columnId) {
+        col.style.backgroundColor = '';
+      }
+    }
+  },
 };

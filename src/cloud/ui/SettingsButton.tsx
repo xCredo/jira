@@ -5,13 +5,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SettingsPanel } from '../PluginSettings/SettingsPanel';
 import styles from './settings.module.css';
 
+const ANT_POPUP_SELECTORS = '.ant-popover, .ant-select-dropdown, .ant-color-picker-dropdown, .ant-picker-dropdown, .ant-modal-root, .ant-dropdown';
+
 export const SettingsButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (popupRef.current && !popupRef.current.contains(target)) {
+        if ((target as Element)?.closest?.(ANT_POPUP_SELECTORS)) {
+          return;
+        }
         setIsOpen(false);
       }
     };

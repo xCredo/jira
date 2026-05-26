@@ -12,6 +12,7 @@ import type { BoardRuntimeModel } from './models/BoardRuntimeModel';
 import type { PropertyModel } from '../property/PropertyModel';
 import { ColumnLimitsSettingsTab } from '../SettingsTab';
 import { COLUMN_LIMITS_TEXTS } from '../SettingsPage/texts';
+import { boardPagePageObjectToken } from 'src/infrastructure/page-objects/BoardPage';
 
 interface EditData {
   /** Present on Jira edit payload; not used to gate the helper panel tab. */
@@ -50,7 +51,8 @@ export default class ColumnLimitsBoardPage extends PageModification<[EditData?, 
   }
 
   waitForLoading(): Promise<Element> {
-    return this.waitForElement('.ghx-column-header-group');
+    const po = this.container.inject(boardPagePageObjectToken);
+    return this.waitForElement(po.selectors.columnHeader);
   }
 
   async loadData(): Promise<[EditData, WipLimitsProperty]> {
@@ -93,9 +95,11 @@ export default class ColumnLimitsBoardPage extends PageModification<[EditData?, 
       headerGroup.style.paddingTop = '10px';
     }
 
+    const po = this.container.inject(boardPagePageObjectToken);
+
     (boardRuntimeModel as BoardRuntimeModel).apply();
 
-    this.onDOMChange('#ghx-pool', () => {
+    this.onDOMChange(po.selectors.pool, () => {
       (boardRuntimeModel as BoardRuntimeModel).apply();
     });
   }

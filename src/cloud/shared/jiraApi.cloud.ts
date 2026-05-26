@@ -50,25 +50,26 @@ export const getBoardEditDataCloud = async (
   const url = `/rest/agile/1.0/board/${boardId}/configuration`;
 
   try {
-    if (abortPromise) {
-      await abortPromise;
-    }
-
-    const response = await fetch(url, {
+    const fetchPromise = fetch(url, {
       credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    if (!response.ok) {
-      console.warn('[getBoardEditDataCloud] Failed to fetch board config:', response.status);
+    const response = abortPromise
+      ? await Promise.race([fetchPromise, abortPromise.then(() => null as Response | null)])
+      : await fetchPromise;
+
+    if (!response || !response.ok) {
+      if (response) {
+        console.warn('[getBoardEditDataCloud] Failed to fetch board config:', response.status);
+      }
       return { canEdit: false };
     }
 
     const data = await response.json();
 
-    // Маппим response в формат аналогичный Server
     return {
       canEdit: data.editEnabled ?? true,
       rapidListConfig: {

@@ -2,7 +2,7 @@
 // React-компонент настроек групповых WIP-лимитов (Ant Design)
 
 import React, { useState, useEffect } from 'react';
-import { Checkbox, Input, InputNumber, Button, Table, Space, Switch, ColorPicker, Typography, Card } from 'antd';
+import { Checkbox, Input, InputNumber, Button, Table, Space, Switch, ColorPicker, Typography, Card, Tooltip } from 'antd';
 import type { Color } from 'antd/es/color-picker';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { cloudContainer } from '../../shared/di';
@@ -158,12 +158,23 @@ export const ColumnLimitsSettings: React.FC = () => {
       title: 'Название',
       dataIndex: 'name',
       key: 'name',
+      ellipsis: { showTitle: false },
+      render: (name: string) => (
+        <Tooltip placement="topLeft" title={name}>
+          {name}
+        </Tooltip>
+      ),
     },
     {
       title: 'Колонки',
       dataIndex: 'columnNames',
       key: 'columnNames',
-      render: (names: string[]) => names.join(', '),
+      ellipsis: { showTitle: false },
+      render: (names: string[]) => (
+        <Tooltip placement="topLeft" title={names.join(', ')}>
+          {names.join(', ')}
+        </Tooltip>
+      ),
     },
     {
       title: 'Лимит',

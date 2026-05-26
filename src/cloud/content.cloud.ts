@@ -29,6 +29,10 @@ import { SettingsButton } from './ui';
 import { registerSettings } from '../features/board-settings/actions/registerSettings';
 import { loadLocalSettings } from '../features/local-settings/actions/loadLocalSettings';
 import { LocalSettingsTab } from '../features/local-settings/components/LocalSettingsTab';
+import { columnLimitsModule } from '../features/column-limits-module/module';
+import ColumnLimitsBoardPage, { columnLimitsBoardPageToken } from '../features/column-limits-module/BoardPage';
+import { registerBoardPropertyServiceInDI } from '../infrastructure/jira/boardPropertyService';
+import { registerServerApiCloudAdapters } from './shared/di/serverApiAdapters.cloud';
 
 function initCloudDiContainer() {
   registerLogger(globalContainer);
@@ -118,12 +122,17 @@ export async function initializeCloudExtension(): Promise<void> {
   // Register Cloud BoardPagePageObject in globalContainer so PageModifications can use it
   globalContainer.register({ token: boardPagePageObjectToken, value: boardPageObject });
 
-  // Instantiate PageModifications directly with Cloud BoardPageObject
+  registerServerApiCloudAdapters(globalContainer);
+  registerBoardPropertyServiceInDI(globalContainer);
+  columnLimitsModule.ensure(globalContainer);
+
+  const columnLimitsBoardPage = new ColumnLimitsBoardPage(globalContainer);
+
   const boardSettingsBoardPage = new BoardSettingsBoardPage(globalContainer);
   const localSettingsBoardPage = new LocalSettingsBoardPage(globalContainer);
 
   const modificationsMap = {
-    [Routes.BOARD]: [boardSettingsBoardPage, localSettingsBoardPage],
+    [Routes.BOARD]: [boardSettingsBoardPage, localSettingsBoardPage, columnLimitsBoardPage],
     [Routes.ALL]: [],
   };
 
