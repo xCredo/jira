@@ -74,6 +74,13 @@ export const ColumnLimitsSettingsTab: React.FC<ColumnLimitsSettingsTabProps> = (
     [settingsUi]
   );
 
+  const handleWarningColorChange = useCallback(
+    (groupId: string, color: string) => {
+      settingsUi.setGroupWarningColor(groupId, color);
+    },
+    [settingsUi]
+  );
+
   const handleIssueTypesChange = useCallback(
     (groupId: string, selectedTypes: string[], countAllTypes: boolean) => {
       settingsUi.setIssueTypeState(groupId, {
@@ -91,6 +98,15 @@ export const ColumnLimitsSettingsTab: React.FC<ColumnLimitsSettingsTabProps> = (
     },
     [settingsUi]
   );
+
+  const handleNameChange = useCallback(
+    (groupId: string, name: string) => {
+      settingsUi.setGroupName(groupId, name);
+    },
+    [settingsUi]
+  );
+
+  const isCloud = typeof (boardPagePO as any).setCachedColumns === 'function';
 
   const handleColumnDragStart = useCallback(
     (e: React.DragEvent, columnId: string, groupId: string) => {
@@ -150,6 +166,8 @@ export const ColumnLimitsSettingsTab: React.FC<ColumnLimitsSettingsTabProps> = (
         swimlanes={swimlanes}
         onLimitChange={handleLimitChange}
         onColorChange={handleColorChange}
+        onNameChange={handleNameChange}
+        onWarningColorChange={handleWarningColorChange}
         onSwimlanesChange={handleSwimlanesChange}
         onIssueTypesChange={handleIssueTypesChange}
         onColumnDragStart={handleColumnDragStart}
@@ -160,6 +178,7 @@ export const ColumnLimitsSettingsTab: React.FC<ColumnLimitsSettingsTabProps> = (
         formId="jh-wip-limits-tab-form"
         allGroupsId="jh-tab-all-groups"
         createGroupDropzoneId="jh-tab-column-dropzone"
+        hideIssueTypes={isCloud}
       />
       <Space style={{ marginTop: 16, width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
         <Button type="primary" onClick={handleSave} loading={isSaving}>

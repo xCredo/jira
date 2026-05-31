@@ -97,11 +97,14 @@ export default class ColumnLimitsBoardPage extends PageModification<[EditData?, 
 
     const po = this.container.inject(boardPagePageObjectToken);
 
-    (boardRuntimeModel as BoardRuntimeModel).apply();
-
-    this.onDOMChange(po.selectors.pool, () => {
+    try {
       (boardRuntimeModel as BoardRuntimeModel).apply();
-    });
+      this.onDOMChange(po.selectors.pool, () => {
+        (boardRuntimeModel as BoardRuntimeModel).apply();
+      });
+    } catch (error) {
+      console.warn('[ColumnLimitsBoardPage] BoardRuntimeModel не поддерживается на этой версии Jira:', error);
+    }
   }
 }
 

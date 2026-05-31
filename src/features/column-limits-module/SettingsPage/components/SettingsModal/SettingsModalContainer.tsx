@@ -52,6 +52,13 @@ export const SettingsModalContainer: React.FC<SettingsModalContainerProps> = ({ 
     [actions]
   );
 
+  const handleWarningColorChange = useCallback(
+    (groupId: string, color: string) => {
+      actions.setGroupWarningColor(groupId, color);
+    },
+    [actions]
+  );
+
   const handleIssueTypesChange = useCallback(
     (groupId: string, selectedTypes: string[], countAllTypes: boolean) => {
       actions.setIssueTypeState(groupId, {
@@ -136,6 +143,7 @@ export const SettingsModalContainer: React.FC<SettingsModalContainerProps> = ({ 
         swimlanes={swimlanes}
         onLimitChange={handleLimitChange}
         onColorChange={handleColorChange}
+        onWarningColorChange={handleWarningColorChange}
         onSwimlanesChange={handleSwimlanesChange}
         onIssueTypesChange={handleIssueTypesChange}
         onColumnDragStart={handleColumnDragStart}

@@ -1,6 +1,6 @@
 /* eslint-disable local/no-inline-styles -- Legacy inline styles; migrate to CSS classes when touching this file. */
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { InputNumber, Space, Card } from 'antd';
+import { InputNumber, Input, Space, Card, Tooltip } from 'antd';
 import { IssueTypeSelector } from '../../../shared/components/IssueTypeSelector';
 import { SwimlaneSelector } from 'src/shared/components/SwimlaneSelector';
 import { useGetTextsByLocale } from 'src/shared/texts';
@@ -37,9 +37,17 @@ interface ColumnGroupProps {
   group: UIGroup;
   issueTypeSelectorState: IssueTypeState;
   swimlanes: Array<{ id: string; name: string }>;
-  texts: { limitForGroup: string; swimlanes: string; allSwimlanes: string; selectColor: string };
+  texts: {
+    limitForGroup: string;
+    swimlanes: string;
+    allSwimlanes: string;
+    selectColor: string;
+    selectWarningColor: string;
+  };
   onLimitChange: (groupId: string, limit: number) => void;
   onColorChange: (groupId: string, color: string) => void;
+  onWarningColorChange?: (groupId: string, color: string) => void;
+  onNameChange?: (groupId: string, name: string) => void;
   onSwimlanesChange?: (groupId: string, selectedSwimlanes: Array<{ id: string; name: string }>) => void;
   onIssueTypesChange: (groupId: string, selectedTypes: string[], countAllTypes: boolean) => void;
   onDrop: (e: React.DragEvent, targetGroupId: string) => void;
@@ -47,6 +55,7 @@ interface ColumnGroupProps {
   onDragLeave: (e: React.DragEvent) => void;
   onColumnDragStart: (e: React.DragEvent, columnId: string, groupId: string) => void;
   onColumnDragEnd: (e: React.DragEvent) => void;
+  hideIssueTypes?: boolean;
 }
 
 const ColumnGroup: React.FC<ColumnGroupProps> = ({
@@ -56,6 +65,8 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
   texts,
   onLimitChange,
   onColorChange,
+  onWarningColorChange,
+  onNameChange,
   onSwimlanesChange,
   onIssueTypesChange,
   onDrop,
@@ -63,6 +74,7 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
   onDragLeave,
   onColumnDragStart,
   onColumnDragEnd,
+  hideIssueTypes,
 }) => {
   const [localLimit, setLocalLimit] = useState<number | undefined>(group.max);
 
@@ -91,6 +103,15 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
     <Card className={styles.columnGroupJH} style={{ marginBottom: 10 }}>
       <Space direction="vertical" style={{ width: '100%' }} size="small">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+          <Tooltip title={group.name || group.id} mouseEnterDelay={0.5}>
+            <Input
+              value={group.name || group.id}
+              onChange={e => onNameChange?.(group.id, e.target.value)}
+              placeholder="Group name"
+              style={{ flex: '1 1 auto', minWidth: 100 }}
+              size="small"
+            />
+          </Tooltip>
           <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{texts.limitForGroup}</span>
           <InputNumber
             data-group-id={group.id}
@@ -115,12 +136,24 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
             }}
             style={{ flex: '0 0 auto', minWidth: 60, maxWidth: 100 }}
           />
-          <ColorPickerButton
-            groupId={group.id}
-            currentColor={group.customHexColor}
-            selectColorText={texts.selectColor}
-            onColorChange={color => onColorChange(group.id, color)}
-          />
+          <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: '#888', marginRight: -2 }}>{texts.selectColor}</span>
+            <ColorPickerButton
+              groupId={group.id}
+              currentColor={group.customHexColor}
+              selectColorText={texts.selectColor}
+              onColorChange={color => onColorChange(group.id, color)}
+            />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: '#888', marginRight: -2 }}>{texts.selectWarningColor}</span>
+            <ColorPickerButton
+              groupId={group.id}
+              currentColor={group.warningColor}
+              selectColorText={texts.selectWarningColor}
+              onColorChange={color => onWarningColorChange?.(group.id, color)}
+            />
+          </span>
         </div>
         <div
           className={`${styles.columnListJH} dropzone-jh`}
@@ -154,15 +187,17 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
             />
           </div>
         )}
-        <div style={{ marginTop: 0, paddingTop: 8, paddingBottom: 0 }}>
-          <IssueTypeSelector
-            groupId={group.id}
-            selectedTypes={issueTypeSelectorState.selectedTypes}
-            initialCountAllTypes={issueTypeSelectorState.countAllTypes}
-            initialProjectKey={issueTypeSelectorState.projectKey}
-            onSelectionChange={handleIssueTypesChange}
-          />
-        </div>
+        {!hideIssueTypes && (
+          <div style={{ marginTop: 0, paddingTop: 8, paddingBottom: 0 }}>
+            <IssueTypeSelector
+              groupId={group.id}
+              selectedTypes={issueTypeSelectorState.selectedTypes}
+              initialCountAllTypes={issueTypeSelectorState.countAllTypes}
+              initialProjectKey={issueTypeSelectorState.projectKey}
+              onSelectionChange={handleIssueTypesChange}
+            />
+          </div>
+        )}
       </Space>
     </Card>
   );
@@ -206,6 +241,8 @@ export interface ColumnLimitsFormProps {
   swimlanes?: Array<{ id: string; name: string }>;
   onLimitChange: (groupId: string, limit: number) => void;
   onColorChange: (groupId: string, color: string) => void;
+  onWarningColorChange?: (groupId: string, color: string) => void;
+  onNameChange?: (groupId: string, name: string) => void;
   onSwimlanesChange?: (groupId: string, selectedSwimlanes: Array<{ id: string; name: string }>) => void;
   onIssueTypesChange: (groupId: string, selectedTypes: string[], countAllTypes: boolean) => void;
   onColumnDragStart: (e: React.DragEvent, columnId: string, groupId: string) => void;
@@ -217,6 +254,7 @@ export interface ColumnLimitsFormProps {
   allGroupsId: string;
   createGroupDropzoneId: string;
   formRefCallback?: (el: HTMLDivElement | null) => void;
+  hideIssueTypes?: boolean;
 }
 
 export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
@@ -226,6 +264,8 @@ export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
   swimlanes = [],
   onLimitChange,
   onColorChange,
+  onWarningColorChange,
+  onNameChange,
   onSwimlanesChange,
   onIssueTypesChange,
   onColumnDragStart,
@@ -237,6 +277,7 @@ export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
   allGroupsId,
   createGroupDropzoneId,
   formRefCallback,
+  hideIssueTypes,
 }) => {
   const texts = useGetTextsByLocale(COLUMN_LIMITS_TEXTS);
   const formRef = useRef<HTMLDivElement | null>(null);
@@ -292,6 +333,8 @@ export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
             texts={texts}
             onLimitChange={onLimitChange}
             onColorChange={onColorChange}
+            onWarningColorChange={onWarningColorChange}
+            onNameChange={onNameChange}
             onSwimlanesChange={onSwimlanesChange}
             onIssueTypesChange={onIssueTypesChange}
             onDrop={onDrop}
@@ -299,6 +342,7 @@ export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
             onDragLeave={onDragLeave}
             onColumnDragStart={onColumnDragStart}
             onColumnDragEnd={onColumnDragEnd}
+            hideIssueTypes={hideIssueTypes}
           />
         ))}
         <CreateGroupDropzone

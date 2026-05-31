@@ -122,7 +122,7 @@ export async function initializeCloudExtension(): Promise<void> {
   // Register Cloud BoardPagePageObject in globalContainer so PageModifications can use it
   globalContainer.register({ token: boardPagePageObjectToken, value: boardPageObject });
 
-  registerServerApiCloudAdapters(globalContainer);
+  registerServerApiCloudAdapters(globalContainer, settingsService);
   registerBoardPropertyServiceInDI(globalContainer);
   columnLimitsModule.ensure(globalContainer);
 

@@ -29,6 +29,10 @@ export const COLUMN_LIMITS_TEXTS = {
     en: 'Select color',
     ru: 'Выберите цвет',
   },
+  selectWarningColor: {
+    en: 'Warning color',
+    ru: 'Цвет при превышении',
+  },
   save: {
     en: 'Save',
     ru: 'Сохранить',

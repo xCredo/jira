@@ -70,17 +70,47 @@ export const getBoardEditDataCloud = async (
 
     const data = await response.json();
 
+    const apiColumns = data.columnConfig?.columns ?? [];
+    const domColumnSelectors = [
+      '[data-testid="platform-board-kit.ui.column.draggable-column"]',
+      '[data-testid="platform-board-kit.ui.column.column-container"]',
+      '[data-testid*="column"]',
+    ];
+
+    let domColumnElements: Element[] = [];
+    for (const sel of domColumnSelectors) {
+      domColumnElements = Array.from(document.querySelectorAll(sel));
+      if (domColumnElements.length > 0) break;
+    }
+
+    const mappedColumns: Array<{ id: string; name: string }> = apiColumns.map((col: any, index: number) => {
+      const domEl = domColumnElements[index];
+      const domId = domEl?.getAttribute('data-column-id') || domEl?.getAttribute('data-id');
+      const statusId = col.statuses?.[0]?.id;
+      const id = domId || String(statusId ?? col.name);
+      return { id, name: col.name };
+    });
+
+    if (mappedColumns.length > 0) {
+      console.log('[getBoardEditDataCloud] Cached columns:', mappedColumns.map(c => `${c.id}=${c.name}`));
+      boardPage.setCachedColumns?.(mappedColumns);
+    }
+
+    const mappedPositions = data.columnConfig?.columns?.map((col: any, index: number) => ({
+      id: `column-${index}`,
+      name: col.name,
+      isKanPlanColumn: false,
+    })) ?? [];
+
+    console.log('[getBoardEditDataCloud] Using positional column IDs:', mappedPositions.map((c: { id: string; name: string }) => `${c.id}=${c.name}`));
+
     return {
       canEdit: data.editEnabled ?? true,
       rapidListConfig: {
         currentStatisticsField: {
           typeId: data.statistics?.typeId ?? 'none',
         },
-        mappedColumns: data.columnConfig?.columns?.map((col: any) => ({
-          id: String(col.statusId ?? col.name),
-          name: col.name,
-          isKanPlanColumn: false,
-        })) ?? [],
+        mappedColumns: mappedPositions,
       },
       swimlanesConfig: {
         swimlanes: data.swimlaneConfig?.swimlanes?.map((sw: any) => ({
@@ -201,15 +231,23 @@ export const updateBoardPropertyCloud = async (
   const url = `/rest/agile/1.0/board/${boardId}/properties/${key}`;
 
   try {
+    const body = JSON.stringify({ value });
+    console.log(`[updateBoardPropertyCloud] PUT ${url}`, JSON.parse(body));
+
     const response = await fetch(url, {
       method: 'PUT',
       credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ value }),
+      body,
     });
 
+    console.log(`[updateBoardPropertyCloud] Response: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      console.error(`[updateBoardPropertyCloud] Failed: ${response.status}`, text);
+    }
     return response.ok;
   } catch (error) {
     console.error('[updateBoardPropertyCloud] Error:', error);

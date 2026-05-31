@@ -89,9 +89,16 @@ export interface IBoardPagePageObject {
   hasCustomSwimlanes(): boolean;
   getColumnElements(): Element[];
   getColumnsInSwimlane(swimlane: Element): Element[];
+  setCachedColumns(columns: Array<{ id: string; name: string }>): void;
 }
 
 export const BoardPagePageObject: IBoardPagePageObject = {
+  _columnsCache: null as Array<{ id: string; name: string }> | null,
+
+  setCachedColumns(columns: Array<{ id: string; name: string }>) {
+    this._columnsCache = columns;
+  },
+
   selectors: {
     pool: '[data-testid="software-board.board-container.board"]',
     issue: '[data-testid="platform-board-kit.ui.card.card"]',
@@ -230,41 +237,68 @@ export const BoardPagePageObject: IBoardPagePageObject = {
         return col;
       }
     }
+    const draggableColumns = document.querySelectorAll<HTMLElement>(
+      '[data-testid="platform-board-kit.ui.column.draggable-column"]'
+    );
+    for (const col of draggableColumns) {
+      if (col.getAttribute('data-column-id') === columnId || col.getAttribute('data-id') === columnId) {
+        return col;
+      }
+    }
+    if (this._columnsCache) {
+      const cachedCol = this._columnsCache.find(c => c.id === columnId);
+      if (cachedCol) {
+        const allCols = columns.length > 0 ? columns : draggableColumns;
+        const idx = this._columnsCache.indexOf(cachedCol);
+        if (allCols[idx]) return allCols[idx];
+      }
+    }
     const header = document.querySelector(this.selectors.columnHeader);
     if (!header) return null;
     return header.querySelector<HTMLElement>(`[data-id="${columnId}"]`);
   },
 
   getOrderedColumnIds(): string[] {
-    const columnContainers = Array.from(document.querySelectorAll(this.selectors.column));
-    const ids = columnContainers
-      .map(col => col.getAttribute('data-column-id') || col.getAttribute('data-id') || '')
-      .filter(Boolean);
-    if (ids.length > 0) {
-      return ids;
+    if (this._columnsCache && this._columnsCache.length > 0) {
+      return this._columnsCache.map(c => c.id);
     }
-    const header = document.querySelector(this.selectors.columnHeader);
-    if (!header) {
-      return [];
+    const columnSelectors = [
+      this.selectors.column,
+      '[data-testid="platform-board-kit.ui.column.draggable-column"]',
+      '[data-component-selector="platform-board-kit.ui.column.draggable-column"]',
+    ];
+    for (const selector of columnSelectors) {
+      const ids = Array.from(document.querySelectorAll(selector))
+        .map(col => col.getAttribute('data-column-id') || col.getAttribute('data-id') || '')
+        .filter(Boolean);
+      if (ids.length > 0) return ids;
     }
-    return Array.from(header.querySelectorAll('[data-id]'))
-      .map(el => el.getAttribute('data-id') || '')
-      .filter(Boolean);
+    return [];
   },
 
   getOrderedColumns(): Array<{ id: string; name: string }> {
+    if (this._columnsCache && this._columnsCache.length > 0) {
+      return this._columnsCache;
+    }
     const ids = this.getOrderedColumnIds();
-    return ids.map(id => {
+    return ids.map((id, index) => {
       const headerEl = this.getColumnHeaderElement(id);
       let name = '';
       if (headerEl) {
         const titleEl = headerEl.querySelector(this.selectors.columnTitle);
         name = titleEl?.textContent?.trim() ?? '';
-        if (!name) {
-          name = headerEl.querySelector('h2, h3')?.textContent?.trim() ?? '';
+      }
+      if (!name) {
+        const allContainers = document.querySelectorAll(
+          '[data-testid="platform-board-kit.ui.column.draggable-column"], ' + this.selectors.column
+        );
+        const container = allContainers[index];
+        if (container) {
+          const heading = container.querySelector('h2, h3, [title]');
+          name = heading?.getAttribute('title') || heading?.textContent?.replace(/\s*\d+\s*$/, '').trim() || '';
         }
       }
-      return { id, name };
+      return { id, name: name || `Column ${index + 1}` };
     });
   },
 
@@ -272,15 +306,35 @@ export const BoardPagePageObject: IBoardPagePageObject = {
     return [];
   },
 
-  getIssueCountInColumn(columnId: string, _options?: any): number {
-    const columns = document.querySelectorAll(this.selectors.column);
-    for (const col of columns) {
-      const colId = col.getAttribute('data-column-id') || col.getAttribute('data-id');
-      if (colId === columnId) {
-        return col.querySelectorAll(this.selectors.issue).length;
+  _findColumnElement(columnId: string): Element | null {
+    const selectors = [
+      this.selectors.column,
+      '[data-testid="platform-board-kit.ui.column.draggable-column"]',
+    ];
+    for (const sel of selectors) {
+      const columns = document.querySelectorAll(sel);
+      for (const col of columns) {
+        if (col.getAttribute('data-column-id') === columnId || col.getAttribute('data-id') === columnId) {
+          return col;
+        }
       }
     }
-    return 0;
+    if (this._columnsCache) {
+      const idx = this._columnsCache.findIndex(c => c.id === columnId);
+      if (idx !== -1) {
+        for (const sel of selectors) {
+          const columns = document.querySelectorAll(sel);
+          if (columns[idx]) return columns[idx];
+        }
+      }
+    }
+    return null;
+  },
+
+  getIssueCountInColumn(columnId: string, _options?: any): number {
+    const col = this._findColumnElement(columnId);
+    if (!col) return 0;
+    return col.querySelectorAll(this.selectors.issue).length;
   },
 
   styleColumnHeader(columnId: string, styles: Partial<CSSStyleDeclaration>): void {
@@ -312,22 +366,16 @@ export const BoardPagePageObject: IBoardPagePageObject = {
   },
 
   highlightColumnCells(columnId: string, color: string, _excludedSwimlaneIds?: string[]): void {
-    const columns = document.querySelectorAll<HTMLElement>(this.selectors.column);
-    for (const col of columns) {
-      const colId = col.getAttribute('data-column-id') || col.getAttribute('data-id');
-      if (colId === columnId) {
-        col.style.backgroundColor = color;
-      }
+    const col = this._findColumnElement(columnId);
+    if (col) {
+      (col as HTMLElement).style.backgroundColor = color;
     }
   },
 
   resetColumnCellStyles(columnId: string): void {
-    const columns = document.querySelectorAll<HTMLElement>(this.selectors.column);
-    for (const col of columns) {
-      const colId = col.getAttribute('data-column-id') || col.getAttribute('data-id');
-      if (colId === columnId) {
-        col.style.backgroundColor = '';
-      }
+    const col = this._findColumnElement(columnId);
+    if (col) {
+      (col as HTMLElement).style.backgroundColor = '';
     }
   },
 };
