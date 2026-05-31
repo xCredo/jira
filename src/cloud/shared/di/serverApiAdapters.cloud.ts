@@ -104,19 +104,23 @@ export function registerServerApiCloudAdapters(
     value: async <T>(_boardId: string, property: string, _options?: any): Promise<T | undefined> => {
       console.log(`[CloudAdapter:getBoardProperty] property="${property}"`);
 
-      const local = localStorage.getItem(`${LS_PREFIX}${property}`);
-      if (local) {
-        try {
-          const parsed = JSON.parse(local) as T;
-          const isEmpty = typeof parsed === 'object' && !Array.isArray(parsed) && parsed !== null && Object.keys(parsed as object).length === 0;
-          if (!isEmpty) {
-            console.log(`[CloudAdapter:getBoardProperty] from localStorage cache`);
-            return parsed;
+      if (property !== BOARD_PROPERTIES.WIP_LIMITS_SETTINGS) {
+        const local = localStorage.getItem(`${LS_PREFIX}${property}`);
+        if (local) {
+          try {
+            const parsed = JSON.parse(local) as T;
+            const isEmpty = typeof parsed === 'object' && !Array.isArray(parsed) && parsed !== null && Object.keys(parsed as object).length === 0;
+            if (!isEmpty) {
+              console.log(`[CloudAdapter:getBoardProperty] from localStorage cache`);
+              return parsed;
+            }
+            console.log(`[CloudAdapter:getBoardProperty] localStorage cache is empty, proceeding to API`);
+          } catch {
+            console.log(`[CloudAdapter:getBoardProperty] localStorage cache parse failed`);
           }
-          console.log(`[CloudAdapter:getBoardProperty] localStorage cache is empty, proceeding to API`);
-        } catch {
-          console.log(`[CloudAdapter:getBoardProperty] localStorage cache parse failed`);
         }
+      } else {
+        console.log(`[CloudAdapter:getBoardProperty] WIP_LIMITS_SETTINGS — skipping localStorage cache, always fetch API`);
       }
 
       let api = await storage.get<any>(property);
