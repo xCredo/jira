@@ -1,116 +1,170 @@
 // src/cloud/content.cloud.ts
-// Точка входа для Jira Cloud (исправлена асинхронная инициализация + Ant Design)
+// Cloud entry point for Jira Cloud (atlassian.net)
 
 import 'antd/dist/reset.css';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { globalContainer } from 'dioma';
+import { Routes, registerRoutingServiceInDI, routingServiceToken } from '../infrastructure/routing';
+import { registerExtensionApiServiceInDI } from '../infrastructure/extension-api/ExtensionApiService';
+import { registerLogger } from '../infrastructure/logging/Logger';
+import { localeProviderToken, JiraLocaleProvider } from '../shared/locale';
 import {
- cloudContainer,
- registerCloudServices,
- settingsServiceToken,
- personLimitsApplierToken,
- columnLimitsApplierToken,
- assigneeHighlighterApplierToken,
- dynamicUpdaterToken,
+  cloudContainer,
+  registerCloudServices,
+  settingsServiceToken,
+  personLimitsApplierToken,
+  columnLimitsApplierToken,
+  assigneeHighlighterApplierToken,
+  dynamicUpdaterToken,
 } from './shared/di';
+import { boardSettingsBoardPageToken } from '../features/board-settings/BoardPage';
+import { localSettingsBoardPageToken } from '../features/local-settings/BoardPage';
+import { BoardSettingsBoardPage } from '../features/board-settings/BoardPage';
+import { LocalSettingsBoardPage } from '../features/local-settings/BoardPage';
+import { boardPagePageObjectToken } from '../infrastructure/page-objects/BoardPage';
+import runModifications from '../infrastructure/page-modification/runModifications';
 import { SettingsButton } from './ui';
+import { registerSettings } from '../features/board-settings/actions/registerSettings';
+import { loadLocalSettings } from '../features/local-settings/actions/loadLocalSettings';
+import { LocalSettingsTab } from '../features/local-settings/components/LocalSettingsTab';
+import { columnLimitsModule } from '../features/column-limits-module/module';
+import ColumnLimitsBoardPage, { columnLimitsBoardPageToken } from '../features/column-limits-module/BoardPage';
+import { registerBoardPropertyServiceInDI } from '../infrastructure/jira/boardPropertyService';
+import { registerServerApiCloudAdapters } from './shared/di/serverApiAdapters.cloud';
+import { PersonLimitsSettingsTab } from './features/person-limits';
+
+function initCloudDiContainer() {
+  registerLogger(globalContainer);
+  registerExtensionApiServiceInDI(globalContainer);
+  registerRoutingServiceInDI(globalContainer);
+  globalContainer.register({
+    token: localeProviderToken,
+    value: new JiraLocaleProvider(),
+  });
+}
 
 function mountSettingsButton(): boolean {
- const controlsBar = document.querySelector('[data-testid="software-board.header.controls-bar"]');
+  const controlsBar = document.querySelector('[data-testid="software-board.header.controls-bar"]');
 
- if (controlsBar && !controlsBar.querySelector('[data-jh-settings-button]')) {
- const container = document.createElement('div');
- container.setAttribute('data-jh-settings-button', '');
- container.style.display = 'inline-block';
- container.style.marginLeft = '8px';
- container.style.position = 'relative';
- controlsBar.appendChild(container);
+  if (controlsBar && !controlsBar.querySelector('[data-jh-settings-button]')) {
+    const container = document.createElement('div');
+    container.setAttribute('data-jh-settings-button', '');
+    container.style.display = 'inline-block';
+    container.style.marginLeft = '8px';
+    container.style.position = 'relative';
+    controlsBar.appendChild(container);
 
- const root = createRoot(container);
- root.render(React.createElement(SettingsButton));
+    const root = createRoot(container);
+    root.render(React.createElement(SettingsButton));
 
- console.log('[Jira Helper Cloud] Кнопка настроек смонтирована');
- return true;
- }
+    console.log('[Jira Helper Cloud] Кнопка настроек смонтирована');
+    return true;
+  }
 
- return false;
+  return false;
 }
 
 function waitForMount(): void {
- if (mountSettingsButton()) {
- return;
- }
+  if (mountSettingsButton()) {
+    return;
+  }
 
- const observer = new MutationObserver(() => {
- if (mountSettingsButton()) {
- observer.disconnect();
- }
- });
+  const observer = new MutationObserver(() => {
+    if (mountSettingsButton()) {
+      observer.disconnect();
+    }
+  });
 
- observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true });
 
- setTimeout(() => {
- observer.disconnect();
- },10000);
+  setTimeout(() => {
+    observer.disconnect();
+  }, 10000);
 }
 
 // Инициализация всех модулей (async)
 export async function initializeCloudExtension(): Promise<void> {
- console.log('[Jira Helper Cloud] Инициализация расширения для Jira Cloud');
+  console.log('[Jira Helper Cloud] Инициализация расширения для Jira Cloud');
 
- registerCloudServices();
- waitForMount();
+  initCloudDiContainer();
+  registerCloudServices();
+  waitForMount();
 
- const personLimitsApplier = cloudContainer.inject(personLimitsApplierToken);
- const columnLimitsApplier = cloudContainer.inject(columnLimitsApplierToken);
- const assigneeHighlighterApplier = cloudContainer.inject(assigneeHighlighterApplierToken);
- const dynamicUpdater = cloudContainer.inject(dynamicUpdaterToken);
- const settingsService = cloudContainer.inject(settingsServiceToken);
+  const routingService = globalContainer.inject(routingServiceToken);
 
- personLimitsApplier.init();
- columnLimitsApplier.init();
+  const personLimitsApplier = cloudContainer.inject(personLimitsApplierToken);
+  const columnLimitsApplier = cloudContainer.inject(columnLimitsApplierToken);
+  const assigneeHighlighterApplier = cloudContainer.inject(assigneeHighlighterApplierToken);
+  const dynamicUpdater = cloudContainer.inject(dynamicUpdaterToken);
+  const settingsService = cloudContainer.inject(settingsServiceToken);
 
- // Ждём загрузки настроек перед применением
- await settingsService.waitForInit();
+  personLimitsApplier.init();
+  columnLimitsApplier.init();
 
- personLimitsApplier.update();
- columnLimitsApplier.update();
+  await settingsService.waitForInit();
 
- dynamicUpdater.start();
- console.log('[Jira Helper Cloud] DynamicUpdater запущен');
+  personLimitsApplier.update();
+  columnLimitsApplier.update();
 
- const settings = settingsService.getSettings();
+  dynamicUpdater.start();
+  console.log('[Jira Helper Cloud] DynamicUpdater запущен');
 
- if (settings.assigneeHighlight?.enabled) {
- assigneeHighlighterApplier.enable();
- console.log('[Jira Helper Cloud] Подсветка исполнителей включена');
- }
+  const settings = settingsService.getSettings();
 
- console.log('[Jira Helper Cloud] Инициализация завершена');
+  if (settings.assigneeHighlight?.enabled) {
+    assigneeHighlighterApplier.enable();
+    console.log('[Jira Helper Cloud] Подсветка исполнителей включена');
+  }
+
+  const boardPageObject = cloudContainer.inject(boardPagePageObjectToken);
+
+  // Register Cloud BoardPagePageObject in globalContainer so PageModifications can use it
+  globalContainer.register({ token: boardPagePageObjectToken, value: boardPageObject });
+
+  registerServerApiCloudAdapters(globalContainer, settingsService);
+  registerBoardPropertyServiceInDI(globalContainer);
+  columnLimitsModule.ensure(globalContainer);
+
+  const columnLimitsBoardPage = new ColumnLimitsBoardPage(globalContainer);
+
+  const boardSettingsBoardPage = new BoardSettingsBoardPage(globalContainer);
+  const localSettingsBoardPage = new LocalSettingsBoardPage(globalContainer);
+
+  const modificationsMap = {
+    [Routes.BOARD]: [boardSettingsBoardPage, localSettingsBoardPage, columnLimitsBoardPage],
+    [Routes.ALL]: [],
+  };
+
+  runModifications(modificationsMap, routingService);
+
+  console.log('[Jira Helper Cloud] Загрузка local settings...');
+  loadLocalSettings();
+  console.log('[Jira Helper Cloud] Регистрация LocalSettingsTab в модалке...');
+  registerSettings({ title: 'Local Settings', component: LocalSettingsTab });
+  registerSettings({ title: 'Person WIP Limits', component: PersonLimitsSettingsTab });
+  console.log('[Jira Helper Cloud] Инициализация завершена');
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
- if (document.readyState === 'loading') {
- document.addEventListener('DOMContentLoaded', () => {
- initializeCloudExtension();
- });
- } else {
- initializeCloudExtension();
- }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeCloudExtension();
+    });
+  } else {
+    initializeCloudExtension();
+  }
 }
 
 export { cloudContainer };
 
 export {
- settingsServiceToken,
- columnServiceToken,
- assigneeServiceToken,
- avatarIndicatorServiceToken,
- personLimitsApplierToken,
- columnLimitsApplierToken,
- assigneeHighlighterApplierToken,
- dynamicUpdaterToken,
+  settingsServiceToken,
+  personLimitsApplierToken,
+  columnLimitsApplierToken,
+  assigneeHighlighterApplierToken,
+  dynamicUpdaterToken,
 } from './shared/di';
 
 export type { Settings, AssigneeHighlightSettings, WipLimitSettings, ColumnGroupWipLimitSettings } from './shared';

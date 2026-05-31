@@ -127,7 +127,6 @@ export class ColumnGroupLimitPanel {
           align-items: center !important;
           justify-content: flex-start !important;
           padding: 0 8px !important;
-          pointer-events: none !important;
         `;
         headerContainer.appendChild(cell);
       }
@@ -178,11 +177,43 @@ export class ColumnGroupLimitPanel {
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
       font-size: 12px !important;
+      cursor: default !important;
     `;
-    nameSpan.title = group.name;
+
+    const tooltipEl = document.createElement('div');
+    tooltipEl.textContent = group.name;
+    tooltipEl.style.cssText = `
+      display: none;
+      position: fixed;
+      z-index: 100000;
+      background: #172b4d;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
+      line-height: 1.4;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    `;
+    tooltipEl.setAttribute('data-jh-tooltip', group.id);
+    document.body.appendChild(tooltipEl);
+
+    nameSpan.addEventListener('mouseenter', (e) => {
+      const rect = nameSpan.getBoundingClientRect();
+      tooltipEl.style.display = 'block';
+      tooltipEl.style.left = `${rect.left}px`;
+      tooltipEl.style.top = `${rect.bottom + 4}px`;
+    });
+    nameSpan.addEventListener('mouseleave', () => {
+      tooltipEl.style.display = 'none';
+    });
 
     const counterSpan = document.createElement('span');
     counterSpan.textContent = `${currentCount}/${group.limit}`;
+    counterSpan.title = `${currentCount}/${group.limit} — ${group.name}`;
     counterSpan.style.cssText = `
       background: ${color} !important;
       color: white !important;
@@ -193,6 +224,8 @@ export class ColumnGroupLimitPanel {
       flex-shrink: 0 !important;
       line-height: 1 !important;
     `;
+
+    groupHeader.title = `${group.name} (${currentCount}/${group.limit})`;
 
     groupHeader.appendChild(nameSpan);
     groupHeader.appendChild(counterSpan);
@@ -208,14 +241,17 @@ export class ColumnGroupLimitPanel {
     document.querySelectorAll<HTMLElement>(`[data-jh-group="${groupId}"]`).forEach(column => {
       column.style.removeProperty('--_1jtound');
       column.style.boxShadow = '';
+      column.style.backgroundColor = '';
+      column.style.background = '';
+      column.style.borderRadius = '';
       column.removeAttribute('data-jh-group');
     });
 
-    document.querySelectorAll('.jh-group-header').forEach(header => {
-      if (header.textContent?.includes(groupId) || header.closest(`[data-jh-group="${groupId}"]`)) {
-        header.remove();
-      }
+    document.querySelectorAll<HTMLElement>(`.jh-group-header[data-group-id="${groupId}"]`).forEach(header => {
+      header.remove();
     });
+
+    document.querySelectorAll<HTMLElement>(`[data-jh-tooltip="${groupId}"]`).forEach(el => el.remove());
 
     this.processedGroups.delete(groupId);
   }
@@ -225,6 +261,10 @@ export class ColumnGroupLimitPanel {
       this.removeGroupVisualization(groupId);
     });
     this.processedGroups.clear();
+    document.querySelectorAll('[data-jh-tooltip]').forEach(el => el.remove());
+    document.querySelectorAll('.jh-group-header').forEach(el => el.remove());
+    document.querySelectorAll('.jh-group-cell').forEach(el => el.remove());
+    document.querySelectorAll('.jh-group-header-container').forEach(el => el.remove());
   }
 
   private hexToRgba(hex: string, alpha: number): string {

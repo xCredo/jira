@@ -1,11 +1,12 @@
+/* eslint-disable local/no-inline-styles -- Legacy inline styles; migrate to CSS classes when touching this file. */
 import React, { useState } from 'react';
 import { Input, Button, Alert, Spin, List, Typography } from 'antd';
 import { CheckCircleTwoTone, CloseCircleTwoTone } from '@ant-design/icons';
 import { parseJqlAst, tokenize, evaluateJqlAst, JqlAstNode, JqlAstResult } from 'src/shared/jql/simpleJqlParser';
-import { useDi } from 'src/shared/diContext';
-import { JiraServiceToken } from 'src/shared/jira/jiraService';
+import { useDi } from 'src/infrastructure/di/diContext';
+import { JiraServiceToken } from 'src/infrastructure/jira/jiraService';
 import { getFieldValueForJqlStandalone } from 'src/features/sub-tasks-progress/IssueCardSubTasksProgress/hooks/useSubtasksProgress';
-import { useGetFields } from 'src/shared/jira/fields/useGetFields';
+import { useGetFields } from 'src/infrastructure/jira/fields/useGetFields';
 import { JqlParserInfoTooltip } from 'src/shared/jql/JqlParserInfoTooltip';
 import { useGetTextsByLocale } from 'src/shared/texts';
 
@@ -56,6 +57,14 @@ const TEXTS = {
     en: 'Condition breakdown',
     ru: 'Пояснение условий',
   },
+  actualValue: {
+    en: 'Actual value',
+    ru: 'Текущее значение',
+  },
+  expectedValue: {
+    en: 'Expected',
+    ru: 'Ожидалось',
+  },
 };
 
 // Pure UI component
@@ -88,6 +97,17 @@ export const JqlDebugDemoPure: React.FC<JqlDebugDemoPureProps> = ({
 }) => {
   const texts = useGetTextsByLocale(TEXTS);
 
+  function formatActualValue(value: unknown): string {
+    if (value === undefined) return 'undefined';
+    if (value === null) return 'null';
+    if (typeof value === 'string') return value === '' ? '(empty string)' : `"${value}"`;
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '[]';
+      return `[${value.map(v => (typeof v === 'string' ? `"${v}"` : String(v))).join(', ')}]`;
+    }
+    return String(value);
+  }
+
   function renderAstTree(node: JqlAstResult, depth = 0) {
     if (!node) return null;
     const icon = node.matched ? (
@@ -96,6 +116,8 @@ export const JqlDebugDemoPure: React.FC<JqlDebugDemoPureProps> = ({
       <CloseCircleTwoTone twoToneColor="#ff4d4f" />
     );
     let label = '';
+    let actualValueDisplay: React.ReactNode = null;
+
     if (node.type === 'AND' || node.type === 'OR') {
       label = node.type;
     } else if (node.type === 'NOT') {
@@ -106,6 +128,24 @@ export const JqlDebugDemoPure: React.FC<JqlDebugDemoPureProps> = ({
       } else {
         label = `${node.field} ${node.op} ${node.value}`;
       }
+      // Show actual value for conditions
+      const formattedActual = formatActualValue(node.actualValue);
+      actualValueDisplay = (
+        <span
+          style={{
+            marginLeft: 12,
+            fontSize: '12px',
+            color: '#888',
+            backgroundColor: node.matched ? '#f6ffed' : '#fff2f0',
+            padding: '2px 6px',
+            borderRadius: 4,
+            border: node.matched ? '1px solid #b7eb8f' : '1px solid #ffccc7',
+          }}
+        >
+          {texts.actualValue}:{' '}
+          <strong style={{ color: node.matched ? '#52c41a' : '#ff4d4f' }}>{formattedActual}</strong>
+        </span>
+      );
     }
     return (
       <div
@@ -113,12 +153,15 @@ export const JqlDebugDemoPure: React.FC<JqlDebugDemoPureProps> = ({
           marginLeft: depth * 20,
           display: 'flex',
           alignItems: 'center',
+          flexWrap: 'wrap',
           color: node.matched ? undefined : '#ff4d4f',
+          marginBottom: 4,
         }}
       >
         {icon} <span style={{ marginLeft: 4 }}>{label}</span>
+        {actualValueDisplay}
         {node.type === 'AND' || node.type === 'OR' ? (
-          <div style={{ marginLeft: 0 }}>
+          <div style={{ marginLeft: 0, width: '100%' }}>
             {renderAstTree(node.left, depth + 1)}
             {renderAstTree(node.right, depth + 1)}
           </div>

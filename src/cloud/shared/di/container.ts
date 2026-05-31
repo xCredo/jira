@@ -1,25 +1,26 @@
 // src/cloud/shared/di/container.ts
-// DI-контейнер для cloud-версии расширения (добавлена подписка на onSettingsChanged)
+// DI-контейнер для cloud-версии расширения
 
 import { Container } from 'dioma';
 import {
- settingsServiceToken,
- columnServiceToken,
- assigneeServiceToken,
- avatarIndicatorServiceToken,
- boardPagePageObjectToken,
- personLimitsApplierToken,
- columnLimitsApplierToken,
- columnGroupLimitPanelToken,
- assigneeHighlighterApplierToken,
- dynamicUpdaterToken,
+  settingsServiceToken,
+  columnServiceToken,
+  assigneeServiceToken,
+  avatarIndicatorServiceToken,
+  personLimitsApplierToken,
+  columnLimitsApplierToken,
+  columnGroupLimitPanelToken,
+  assigneeHighlighterApplierToken,
+  dynamicUpdaterToken,
 } from './tokens';
+import { registerJiraApiCloudInDI } from './jiraApiTokens.cloud';
+import { boardPagePageObjectToken } from '../../../infrastructure/page-objects/BoardPage';
 
 import { SettingsService } from '../SettingsService';
 import { ColumnService } from '../ColumnService';
 import { AssigneeService } from '../AssigneeService';
 import { AvatarIndicatorService } from '../AvatarIndicatorService';
-import { BoardPagePageObject } from '../BoardPagePageObject';
+import { BoardPagePageObject as CloudBoardPagePageObject } from '../BoardPagePageObject';
 import { PersonLimitsApplier } from '../../features/person-limits/PersonLimitsApplier';
 import { ColumnLimitsApplier } from '../../features/column-limits/ColumnLimitsApplier';
 import { ColumnGroupLimitPanel } from '../../features/column-limits/ColumnGroupLimitPanel';
@@ -33,10 +34,10 @@ import { registerInContainer as registerAssigneeHighlighter } from '../../featur
 export const cloudContainer = new Container();
 
 export function registerCloudServices(): void {
- cloudContainer.register({
- token: boardPagePageObjectToken,
- value: BoardPagePageObject,
- });
+  cloudContainer.register({
+    token: boardPagePageObjectToken,
+    value: CloudBoardPagePageObject,
+  });
 
  cloudContainer.register({
  token: settingsServiceToken,
@@ -138,6 +139,9 @@ export function registerCloudServices(): void {
  registerPersonLimits(cloudContainer);
  registerColumnLimits(cloudContainer);
  registerAssigneeHighlighter(cloudContainer);
+
+ // Регистрируем Cloud API адаптеры
+ registerJiraApiCloudInDI(cloudContainer);
 
  console.log('[DI] Cloud services registered');
 }

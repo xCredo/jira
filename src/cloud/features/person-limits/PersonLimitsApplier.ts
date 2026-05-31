@@ -43,8 +43,10 @@ export class PersonLimitsApplier {
 
   update() {
     this.loadSettings();
+
+    this.clearAllPersonIndicators();
+
     if (!this.enabled || this.limits.length === 0) {
-      this.clearWipIndicators();
       return;
     }
 
@@ -65,20 +67,6 @@ export class PersonLimitsApplier {
 
         cardsInLimitedColumns.forEach(card => {
           this.markCardAsOverloaded(card, true, limit.color);
-        });
-
-        allUserCards.forEach(card => {
-          if (!cardsInLimitedColumns.includes(card)) {
-            this.markCardAsOverloaded(card, false);
-          }
-        });
-      } else {
-        console.log(`✅ ${limit.userName} в рамках лимита: ${currentCount}/${limit.limit}`);
-
-        this.avatarIndicatorService.removeIndicator(limit.userId, 'wip-overload');
-
-        allUserCards.forEach(card => {
-          this.markCardAsOverloaded(card, false);
         });
       }
     });
@@ -265,12 +253,15 @@ export class PersonLimitsApplier {
     );
   }
 
-  private clearWipIndicators() {
+  private clearAllPersonIndicators() {
+    this.avatarIndicatorService.removeIndicatorsByType('wip-overload');
+
     document.querySelectorAll('[data-jh-wip-overloaded]').forEach(card => {
-      card.removeAttribute('data-jh-wip-overloaded');
-      card.removeAttribute('data-jh-wip-color');
-      card.classList.remove('jh-wip-overloaded');
-      this.removeWipHighlight(card as HTMLElement);
+      const el = card as HTMLElement;
+      el.removeAttribute('data-jh-wip-overloaded');
+      el.removeAttribute('data-jh-wip-color');
+      el.classList.remove('jh-wip-overloaded', 'jh-wip-overloaded-active');
+      this.removeWipHighlight(el);
     });
   }
 

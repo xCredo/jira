@@ -1,7 +1,8 @@
+/* eslint-disable local/no-inline-styles -- Legacy inline styles; migrate to CSS classes when touching this file. */
 import React from 'react';
 
-import { useDi } from 'src/shared/diContext';
-import { loggerToken } from 'src/shared/Logger';
+import { useDi } from 'src/infrastructure/di/diContext';
+import { loggerToken } from 'src/infrastructure/logging/Logger';
 import { Button } from 'antd';
 import { saveDiagnosticData } from './actions/saveDiagnosticData';
 import { JqlDebugDemo } from './JqlDebugDemo';

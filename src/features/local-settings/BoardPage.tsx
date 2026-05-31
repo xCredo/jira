@@ -1,7 +1,8 @@
-import { BoardPagePageObject } from 'src/page-objects/BoardPage';
+import { Token } from 'dioma';
+import { boardPagePageObjectToken } from 'src/infrastructure/page-objects/BoardPage';
 
-import { registerSettings } from 'src/board-settings/actions/registerSettings';
-import { PageModification } from 'src/shared/PageModification';
+import { registerSettings } from 'src/features/board-settings/actions/registerSettings';
+import { PageModification } from 'src/infrastructure/page-modification/PageModification';
 import { loadLocalSettings } from './actions/loadLocalSettings';
 import { LocalSettingsTab } from './components/LocalSettingsTab';
 
@@ -11,7 +12,8 @@ export class LocalSettingsBoardPage extends PageModification<void, Element> {
   }
 
   waitForLoading(): Promise<Element> {
-    return this.waitForElement(BoardPagePageObject.selectors.pool);
+    const po = this.container.inject(boardPagePageObjectToken);
+    return this.waitForElement(po.selectors.pool);
   }
 
   loadData() {
@@ -25,3 +27,5 @@ export class LocalSettingsBoardPage extends PageModification<void, Element> {
     });
   }
 }
+
+export const localSettingsBoardPageToken = new Token<LocalSettingsBoardPage>('LocalSettingsBoardPage');

@@ -1,7 +1,10 @@
 // src/cloud/shared/di/tokens.ts
-// Токены для DI-контейнера
+// Токены для DI-контейнера Cloud
 
 import { Token } from 'dioma';
+
+// Re-export the shared boardPagePageObjectToken from infrastructure
+export { boardPagePageObjectToken } from '../../../infrastructure/page-objects/BoardPage';
 
 // Services
 export const settingsServiceToken = new Token<import('../SettingsService').SettingsService>('SettingsService');
@@ -11,9 +14,6 @@ export const avatarIndicatorServiceToken = new Token<import('../AvatarIndicatorS
   'AvatarIndicatorService'
 );
 export const settingsStorageToken = new Token<import('../SettingsStorage').SettingsStorage>('SettingsStorage');
-export const boardPagePageObjectToken = new Token<import('../BoardPagePageObject').IBoardPagePageObject>(
-  'BoardPagePageObject'
-);
 
 // Appliers
 export const personLimitsApplierToken = new Token<
