@@ -33,6 +33,7 @@ import { columnLimitsModule } from '../features/column-limits-module/module';
 import ColumnLimitsBoardPage, { columnLimitsBoardPageToken } from '../features/column-limits-module/BoardPage';
 import { registerBoardPropertyServiceInDI } from '../infrastructure/jira/boardPropertyService';
 import { registerServerApiCloudAdapters } from './shared/di/serverApiAdapters.cloud';
+import { PersonLimitsSettingsTab } from './features/person-limits';
 
 function initCloudDiContainer() {
   registerLogger(globalContainer);
@@ -142,6 +143,7 @@ export async function initializeCloudExtension(): Promise<void> {
   loadLocalSettings();
   console.log('[Jira Helper Cloud] Регистрация LocalSettingsTab в модалке...');
   registerSettings({ title: 'Local Settings', component: LocalSettingsTab });
+  registerSettings({ title: 'Person WIP Limits', component: PersonLimitsSettingsTab });
   console.log('[Jira Helper Cloud] Инициализация завершена');
 }
 
