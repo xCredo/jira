@@ -241,6 +241,9 @@ export class ColumnGroupLimitPanel {
     document.querySelectorAll<HTMLElement>(`[data-jh-group="${groupId}"]`).forEach(column => {
       column.style.removeProperty('--_1jtound');
       column.style.boxShadow = '';
+      column.style.backgroundColor = '';
+      column.style.background = '';
+      column.style.borderRadius = '';
       column.removeAttribute('data-jh-group');
     });
 

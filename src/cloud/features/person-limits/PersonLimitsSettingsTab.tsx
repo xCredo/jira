@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Space, Checkbox, Select, InputNumber, Table, ColorPicker, Switch, Typography } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { cloudContainer } from '../../shared/di';
-import { settingsServiceToken, assigneeServiceToken, columnServiceToken } from '../../shared/di/tokens';
+import { settingsServiceToken, assigneeServiceToken, columnServiceToken, personLimitsApplierToken } from '../../shared/di/tokens';
 import type { Assignee } from '../../shared/AssigneeService';
 import type { ColumnInfo } from '../../shared/ColumnService';
 
@@ -16,7 +16,7 @@ interface PersonLimitRow {
   userName: string;
   columnIds: string[];
   columnNames: string[];
-  limit: number;
+  limit: number | undefined;
   color: string;
 }
 
@@ -30,7 +30,7 @@ export const PersonLimitsSettingsTab: React.FC = () => {
     userId: '',
     userName: '',
     columnIds: [] as string[],
-    limit: 3,
+    limit: 3 as number | undefined,
     color: '#FF0000',
   });
 
@@ -41,7 +41,7 @@ export const PersonLimitsSettingsTab: React.FC = () => {
   const loadSettings = () => {
     const settings = settingsService.getSettings();
     setEnabled(settings.personalWipLimits?.enabled || false);
-    setLimits(settings.personalWipLimits?.limits || []);
+    setLimits((settings.personalWipLimits?.limits || []).map(l => ({ ...l, limit: l.limit ?? undefined })));
   };
 
   useEffect(() => {
@@ -67,13 +67,15 @@ export const PersonLimitsSettingsTab: React.FC = () => {
 
     const selectedColumns = availableColumns.filter(c => newLimit.columnIds.includes(c.id));
 
+    const finalLimit = newLimit.limit && newLimit.limit >= 1 ? newLimit.limit : 1;
+
     const newLimitRow: PersonLimitRow = {
       id: `limit-${Date.now()}`,
       userId: newLimit.userId,
       userName: selectedUser.name,
       columnIds: newLimit.columnIds,
       columnNames: selectedColumns.map(c => c.name),
-      limit: newLimit.limit,
+      limit: finalLimit,
       color: newLimit.color,
     };
 
@@ -82,7 +84,7 @@ export const PersonLimitsSettingsTab: React.FC = () => {
       userId: '',
       userName: '',
       columnIds: [],
-      limit: 3,
+      limit: 3 as number | undefined,
       color: '#FF0000',
     });
   };
@@ -98,9 +100,15 @@ export const PersonLimitsSettingsTab: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      const sanitizedLimits = limits.map(l => ({
+        ...l,
+        limit: l.limit && l.limit >= 1 ? l.limit : 1,
+      }));
       await settingsService.updateSettings({
-        personalWipLimits: { enabled, limits },
+        personalWipLimits: { enabled, limits: sanitizedLimits },
       });
+      const applier = cloudContainer.inject(personLimitsApplierToken);
+      applier.update();
     } finally {
       setIsSaving(false);
     }
@@ -127,9 +135,9 @@ export const PersonLimitsSettingsTab: React.FC = () => {
       key: 'limit',
       render: (_: any, record: PersonLimitRow) => (
         <InputNumber
-          min={0}
+          min={1}
           value={record.limit}
-          onChange={val => handleUpdateLimit(record.id, 'limit', val || 0)}
+          onChange={val => handleUpdateLimit(record.id, 'limit', val ?? undefined)}
           style={{ width: 80 }}
         />
       ),
@@ -216,7 +224,7 @@ export const PersonLimitsSettingsTab: React.FC = () => {
                 <InputNumber
                   min={1}
                   value={newLimit.limit}
-                  onChange={val => setNewLimit(prev => ({ ...prev, limit: val || 0 }))}
+                  onChange={val => setNewLimit(prev => ({ ...prev, limit: val ?? undefined }))}
                   style={{ marginLeft: 10, width: 80 }}
                 />
               </div>

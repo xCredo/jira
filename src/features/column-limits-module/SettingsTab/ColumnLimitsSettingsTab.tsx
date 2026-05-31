@@ -99,6 +99,13 @@ export const ColumnLimitsSettingsTab: React.FC<ColumnLimitsSettingsTabProps> = (
     [settingsUi]
   );
 
+  const handleDeleteGroup = useCallback(
+    (groupId: string) => {
+      settingsUi.removeGroup(groupId);
+    },
+    [settingsUi]
+  );
+
   const handleNameChange = useCallback(
     (groupId: string, name: string) => {
       settingsUi.setGroupName(groupId, name);
@@ -168,6 +175,7 @@ export const ColumnLimitsSettingsTab: React.FC<ColumnLimitsSettingsTabProps> = (
         onColorChange={handleColorChange}
         onNameChange={handleNameChange}
         onWarningColorChange={handleWarningColorChange}
+        onDeleteGroup={handleDeleteGroup}
         onSwimlanesChange={handleSwimlanesChange}
         onIssueTypesChange={handleIssueTypesChange}
         onColumnDragStart={handleColumnDragStart}

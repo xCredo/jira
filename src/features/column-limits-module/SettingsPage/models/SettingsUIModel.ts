@@ -109,6 +109,15 @@ export class SettingsUIModel {
     }
   }
 
+  removeGroup(groupId: string): void {
+    const group = this.groups.find(g => g.id === groupId);
+    if (group) {
+      this.withoutGroupColumns.push(...group.columns);
+      this.groups = this.groups.filter(g => g.id !== groupId);
+      delete this.issueTypeSelectorStates[groupId];
+    }
+  }
+
   setGroupLimit(groupId: string, limit: number): void {
     const group = this.groups.find(g => g.id === groupId);
     if (group) group.max = limit;

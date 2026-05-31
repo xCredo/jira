@@ -46,16 +46,10 @@ export class ColumnLimitsApplier {
   update() {
     this.loadSettings();
 
-    const processedGroups = this.columnGroupLimitPanel.getProcessedGroups();
-    const activeGroupIds = new Set(this.limits.map(g => g.id));
-    processedGroups.forEach((groupId: string) => {
-      if (!activeGroupIds.has(groupId)) {
-        this.columnGroupLimitPanel.removeGroupVisualization(groupId);
-      }
-    });
+    this.columnGroupLimitPanel.clearAll();
+    this.avatarIndicatorService.removeIndicatorsByType('group-wip-overload');
 
     if (!this.enabled || this.limits.length === 0) {
-      this.clearGroupIndicators();
       return;
     }
 
@@ -66,17 +60,7 @@ export class ColumnLimitsApplier {
 
       console.log(`Группа "${group.name}": ${currentCount}/${group.limit}, exceeded=${exceeded}`);
 
-      if (exceeded) {
-        console.log(`⚠️ Группа "${group.name}" превысила лимит: ${currentCount}/${group.limit}`);
-
-        this.applyGroupVisualization(group, exceeded, currentCount);
-      } else {
-        console.log(`✅ Группа "${group.name}" в рамках лимита: ${currentCount}/${group.limit}`);
-
-        this.avatarIndicatorService.removeIndicatorsByType('group-wip-overload');
-
-        this.applyGroupVisualization(group, false, currentCount);
-      }
+      this.applyGroupVisualization(group, exceeded, currentCount);
     });
   }
 

@@ -1,6 +1,7 @@
 /* eslint-disable local/no-inline-styles -- Legacy inline styles; migrate to CSS classes when touching this file. */
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { InputNumber, Input, Space, Card, Tooltip } from 'antd';
+import { InputNumber, Input, Space, Card, Tooltip, Button } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import { IssueTypeSelector } from '../../../shared/components/IssueTypeSelector';
 import { SwimlaneSelector } from 'src/shared/components/SwimlaneSelector';
 import { useGetTextsByLocale } from 'src/shared/texts';
@@ -47,6 +48,7 @@ interface ColumnGroupProps {
   onLimitChange: (groupId: string, limit: number) => void;
   onColorChange: (groupId: string, color: string) => void;
   onWarningColorChange?: (groupId: string, color: string) => void;
+  onDeleteGroup?: (groupId: string) => void;
   onNameChange?: (groupId: string, name: string) => void;
   onSwimlanesChange?: (groupId: string, selectedSwimlanes: Array<{ id: string; name: string }>) => void;
   onIssueTypesChange: (groupId: string, selectedTypes: string[], countAllTypes: boolean) => void;
@@ -66,6 +68,7 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
   onLimitChange,
   onColorChange,
   onWarningColorChange,
+  onDeleteGroup,
   onNameChange,
   onSwimlanesChange,
   onIssueTypesChange,
@@ -154,6 +157,15 @@ const ColumnGroup: React.FC<ColumnGroupProps> = ({
               onColorChange={color => onWarningColorChange?.(group.id, color)}
             />
           </span>
+          {onDeleteGroup && (
+            <Button
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+              onClick={() => onDeleteGroup(group.id)}
+              style={{ flexShrink: 0, marginLeft: 4 }}
+            />
+          )}
         </div>
         <div
           className={`${styles.columnListJH} dropzone-jh`}
@@ -242,6 +254,7 @@ export interface ColumnLimitsFormProps {
   onLimitChange: (groupId: string, limit: number) => void;
   onColorChange: (groupId: string, color: string) => void;
   onWarningColorChange?: (groupId: string, color: string) => void;
+  onDeleteGroup?: (groupId: string) => void;
   onNameChange?: (groupId: string, name: string) => void;
   onSwimlanesChange?: (groupId: string, selectedSwimlanes: Array<{ id: string; name: string }>) => void;
   onIssueTypesChange: (groupId: string, selectedTypes: string[], countAllTypes: boolean) => void;
@@ -265,6 +278,7 @@ export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
   onLimitChange,
   onColorChange,
   onWarningColorChange,
+  onDeleteGroup,
   onNameChange,
   onSwimlanesChange,
   onIssueTypesChange,
@@ -334,6 +348,7 @@ export const ColumnLimitsForm: React.FC<ColumnLimitsFormProps> = ({
             onLimitChange={onLimitChange}
             onColorChange={onColorChange}
             onWarningColorChange={onWarningColorChange}
+            onDeleteGroup={onDeleteGroup}
             onNameChange={onNameChange}
             onSwimlanesChange={onSwimlanesChange}
             onIssueTypesChange={onIssueTypesChange}

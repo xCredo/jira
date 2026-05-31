@@ -38,6 +38,13 @@ export const SettingsModalContainer: React.FC<SettingsModalContainerProps> = ({ 
   };
 
   // Handlers for ColumnLimitsForm
+  const handleDeleteGroup = useCallback(
+    (groupId: string) => {
+      actions.removeGroup(groupId);
+    },
+    [actions]
+  );
+
   const handleLimitChange = useCallback(
     (groupId: string, limit: number) => {
       actions.setGroupLimit(groupId, limit);
@@ -144,6 +151,7 @@ export const SettingsModalContainer: React.FC<SettingsModalContainerProps> = ({ 
         onLimitChange={handleLimitChange}
         onColorChange={handleColorChange}
         onWarningColorChange={handleWarningColorChange}
+        onDeleteGroup={handleDeleteGroup}
         onSwimlanesChange={handleSwimlanesChange}
         onIssueTypesChange={handleIssueTypesChange}
         onColumnDragStart={handleColumnDragStart}
